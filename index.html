@@ -3,856 +3,486 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Analyse VOI - version statique</title>
+  <title>Atelier Occulte — Brutal Underground Berlin</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script
-    src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
-    integrity="sha512-dfX5uYVXzyU8+KHqj8bjo7UkOdg18PaOtpa48djpNbZHwExddghZ+ZmzWT06R5v6NSk3ZUfsH6FNEDepLx9hPQ=="
-    crossorigin="anonymous"
-    referrerpolicy="no-referrer"
-  ></script>
-  <!--
-    Hachage SRI officiel de Leaflet 1.9.4 (source : https://unpkg.com/leaflet@1.9.4/dist/).
-    Pour le vérifier ou le régénérer lors d'une mise à jour, télécharger le fichier puis exécuter :
-      openssl dgst -sha256 -binary leaflet.js | openssl base64 -A
-    La carte fonctionne sans l'attribut "integrity", mais le conserver garantit que le fichier chargé
-    n'a pas été altéré sur le CDN.
-  -->
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
-  />
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Barlow+Condensed:wght@500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #04070f;
-      --panel: #0c111c;
-      --accent: #00f59b;
-      --accent-2: #7c3aed;
-      --text: #e6edf7;
-      --muted: #8fa2b7;
-      --border: #151d2c;
-      --shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-      --glow: 0 0 0 1px rgba(0, 245, 155, 0.35), 0 12px 30px rgba(0, 245, 155, 0.12);
+      --bg: #050505;
+      --ink: #0a0a0a;
+      --paper: #0f0f0f;
+      --acid: #7aff5c;
+      --acid-2: #ff3fd1;
+      --text: #f5f7f4;
+      --muted: #b5b6ba;
+      --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='1200' height='800' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+      --scanlines: repeating-linear-gradient( to bottom, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, rgba(0,0,0,0) 3px, rgba(0,0,0,0) 4px );
+      --shadow: 0 22px 40px rgba(0,0,0,0.35);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      min-height: 100vh;
-      background: radial-gradient(circle at 15% 20%, rgba(124, 58, 237, 0.08), transparent 28%),
-        radial-gradient(circle at 85% 10%, rgba(0, 245, 155, 0.1), transparent 32%),
-        linear-gradient(180deg, #050913 0%, #04070f 100%);
+      background: var(--bg);
       color: var(--text);
-      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      line-height: 1.5;
+      font-family: 'Space Mono', monospace;
+      line-height: 1.55;
+      position: relative;
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+    body::before, body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+    }
+    body::before {
+      background: var(--grain);
+      mix-blend-mode: soft-light;
+      opacity: 0.35;
+    }
+    body::after {
+      background: var(--scanlines);
+      opacity: 0.07;
     }
     header {
-      padding: 18px 28px 10px;
-      border-bottom: 1px solid var(--border);
-      background: rgba(10, 14, 22, 0.9);
-      backdrop-filter: blur(10px);
       position: sticky;
       top: 0;
-      z-index: 5;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      z-index: 4;
+      background: rgba(0,0,0,0.9);
+      border-bottom: 2px solid var(--acid);
+      box-shadow: inset 0 -1px 0 rgba(255,255,255,0.06);
     }
-    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; color: #f8fafc; }
-    h2 { margin-top: 20px; margin-bottom: 10px; letter-spacing: -0.01em; color: #e6edf7; }
-    p { margin: 8px 0 0; color: var(--muted); }
-    .container { padding: 16px 28px 28px; max-width: 1220px; margin: 0 auto; max-height: calc(100vh - 108px); overflow-y: auto; }
-    .grid {
+    .nav-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 18px;
+      padding: 18px clamp(16px, 5vw, 42px);
+      align-items: center;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .brand-badge {
+      background: var(--acid);
+      color: #000;
+      padding: 8px 12px;
+      border: 2px solid #000;
+      transform: rotate(-3deg);
+      box-shadow: -4px 4px 0 var(--acid-2);
+      font-size: 14px;
+    }
+    nav ul {
+      display: grid;
+      grid-auto-flow: column;
+      gap: clamp(12px, 2vw, 26px);
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      text-transform: uppercase;
+      font-size: 14px;
+      letter-spacing: 0.05em;
+    }
+    nav a {
+      color: var(--text);
+      text-decoration: none;
+      position: relative;
+      padding: 8px 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    nav a::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      bottom: 4px;
+      width: 100%;
+      height: 2px;
+      background: var(--acid);
+      transform: scaleX(0.08);
+      transform-origin: left;
+      transition: transform 120ms ease;
+    }
+    nav a:hover::after, nav a:focus-visible::after { transform: scaleX(1); }
+    nav a:focus-visible { outline: 2px dashed var(--acid-2); outline-offset: 4px; }
+
+    main { position: relative; z-index: 1; }
+    .layout {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 16px;
-      margin-top: 16px;
+      gap: 26px;
+      padding: clamp(16px, 5vw, 42px);
     }
-    .card {
-      background: linear-gradient(150deg, rgba(14, 19, 31, 0.98) 0%, rgba(10, 14, 24, 0.95) 100%);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px 18px;
+    .section {
+      background: linear-gradient(135deg, rgba(10,10,10,0.94), rgba(13,13,13,0.8));
+      border: 2px solid #1a1a1a;
       box-shadow: var(--shadow);
+      padding: clamp(16px, 3vw, 34px);
+      position: relative;
+      overflow: hidden;
     }
-    label { font-weight: 700; display: block; margin-bottom: 6px; color: #d9e3f0; }
-    input[type="file"] {
-      width: 100%;
-      background: #0f1624;
-      border: 1px dashed var(--border);
-      color: var(--muted);
-      padding: 10px;
-      border-radius: 10px;
-    }
-    button {
-      background: linear-gradient(120deg, var(--accent), #12c2e9);
-      color: #04100d;
-      border: none;
-      border-radius: 12px;
-      padding: 11px 16px;
-      font-weight: 800;
-      cursor: pointer;
-      box-shadow: var(--glow);
-      transition: transform 0.1s ease, box-shadow 0.25s ease, filter 0.2s ease;
-      letter-spacing: 0.01em;
-    }
-    button:hover { filter: brightness(1.08); box-shadow: 0 0 0 1px rgba(18, 194, 233, 0.5), 0 16px 40px rgba(0, 245, 155, 0.25); }
-    button:active { transform: translateY(1px); }
-    .inline { display: inline-flex; align-items: center; gap: 8px; }
-    .pill {
-      display: inline-block;
-      padding: 6px 10px;
-      border-radius: 999px;
-      background: rgba(0, 245, 155, 0.12);
-      color: #b1fbe0;
-      border: 1px solid rgba(0, 245, 155, 0.35);
-      font-size: 13px;
-      margin-right: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }
-    .muted { color: var(--muted); }
-    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 10px; }
-    .metric { padding: 12px; background: #0f1524; border: 1px solid var(--border); border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02); }
-    .metric strong { display: block; font-size: 22px; letter-spacing: -0.01em; color: #f8fafc; }
-    #map { height: 420px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
-    .footer { margin-top: 20px; color: var(--muted); font-size: 14px; text-align: center; }
-    a { color: var(--accent); text-decoration: none; }
-    a:hover { text-shadow: 0 0 10px rgba(0, 245, 155, 0.35); }
-    .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
-    .control { display: flex; flex-direction: column; gap: 6px; }
-    .control-span-2 { grid-column: span 2; }
-    select, input[type="number"], input[type="datetime-local"] {
-      background: #0f1624;
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 10px 12px;
-      border-radius: 12px;
-    }
-    input[type="range"] {
-      accent-color: var(--accent);
-    }
-    .pill-button {
-      border: 1px solid var(--border);
-      background: #0f1624;
-      color: var(--text);
-      padding: 9px 12px;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-    }
-    .pill-button:hover { border-color: var(--accent); box-shadow: 0 6px 20px rgba(0, 245, 155, 0.18); }
-    .vehicle-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; max-height: 230px; overflow-y: auto; padding: 6px; background: #0f1624; border: 1px solid var(--border); border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
-    .vehicle-item { padding: 9px 11px; border-radius: 12px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: transform 0.1s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
-    .vehicle-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(0, 245, 155, 0.25), 0 12px 28px rgba(0, 0, 0, 0.35); transform: translateY(-1px); }
-    .muted-text { color: var(--muted); font-size: 14px; }
-    .badge { background: rgba(124, 58, 237, 0.18); color: var(--text); padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(124, 58, 237, 0.35); font-size: 12px; }
-    .map-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; }
-    @media (max-width: 960px) { .map-grid { grid-template-columns: 1fr; } #map { height: 360px; } }
-    .panel { background: #0f1524; border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
-    .panel h3 { margin: 0 0 8px; font-size: 16px; color: #e8ecf4; }
-    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip { padding: 8px 10px; background: rgba(15, 23, 42, 0.18); border: 1px solid var(--border); border-radius: 12px; font-weight: 600; color: #dce5f1; }
-    .map-legend { display: flex; gap: 10px; align-items: center; margin-top: 10px; color: var(--muted); font-size: 13px; }
-    .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
-    .range-group { display: flex; flex-direction: column; gap: 10px; }
-    .range-stack { position: relative; height: 44px; }
-    .range-track {
-      position: absolute;
-      inset: 18px 0;
-      height: 10px;
-      border-radius: 999px;
-      background: linear-gradient(to right, #0b1020 0%, #0b1020 100%);
-      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
-    }
-    .hour-range {
+    .section::before {
+      content: "";
       position: absolute;
       inset: 0;
-      width: 100%;
-      background: transparent;
+      background: linear-gradient(120deg, rgba(122,255,92,0.08), transparent 48%, rgba(255,63,209,0.08));
+      opacity: 0.7;
       pointer-events: none;
-      appearance: none;
-      -webkit-appearance: none;
     }
-    .hour-range::-webkit-slider-thumb {
-      pointer-events: all;
-      appearance: none;
-      -webkit-appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: 2px solid #0b1020;
-      box-shadow: 0 4px 10px rgba(0, 245, 155, 0.35);
+    .section h2 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 5vw, 44px);
+      line-height: 1;
+      text-transform: uppercase;
+      font-family: 'Barlow Condensed', sans-serif;
+      letter-spacing: 0.04em;
     }
-    .hour-range::-moz-range-thumb {
-      pointer-events: all;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: 2px solid #0b1020;
-      box-shadow: 0 4px 10px rgba(0, 245, 155, 0.35);
+    .sticky-label {
+      display: inline-block;
+      padding: 6px 10px;
+      border: 2px solid var(--text);
+      background: var(--acid);
+      color: #000;
+      font-weight: 700;
+      transform: rotate(-4deg);
+      margin-bottom: 14px;
+      box-shadow: -3px 3px 0 var(--acid-2);
     }
-    .hour-range::-moz-range-track { background: transparent; }
-    .range-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-    .hour-summary { font-weight: 700; }
-    .range-hint { color: var(--muted); font-size: 14px; }
-    .quick-ranges { display: flex; gap: 8px; flex-wrap: wrap; }
-    .quick-ranges .pill-button { padding: 7px 10px; font-weight: 600; }
-    .trip-arrow { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; }
-    .trip-arrow .arrow-head {
-      width: 0;
-      height: 0;
-      border-left: 7px solid transparent;
-      border-right: 7px solid transparent;
-      border-bottom: 12px solid var(--arrow-color, var(--accent));
-      transform: rotate(var(--angle, 0deg)) scale(0.9);
-      filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.35));
+    .hero {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 20px;
+      align-items: end;
+      background: linear-gradient(160deg, #0c0c0c, #060606 70%);
+      border: 2px solid #161616;
+      position: relative;
+    }
+    .hero::after {
+      content: "SCAN";
+      position: absolute;
+      right: 8%;
+      top: 8%;
+      font-size: clamp(24px, 6vw, 72px);
+      color: rgba(122,255,92,0.08);
+      letter-spacing: 0.16em;
+    }
+    .hero h1 {
+      margin: 0 0 16px;
+      font-size: clamp(42px, 8vw, 92px);
+      line-height: 0.9;
+      text-transform: uppercase;
+      font-family: 'Barlow Condensed', sans-serif;
+      letter-spacing: -0.01em;
+    }
+    .hero p { margin: 0 0 12px; max-width: 64ch; color: var(--muted); }
+    .tagline { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 0; }
+    .tagline span { padding: 6px 10px; border: 2px solid var(--text); background: #0f0f0f; transform: rotate(-2deg); }
+
+    .hero-list {
+      display: grid;
+      gap: 10px;
+      background: #0b0b0b;
+      border: 2px solid #1f1f1f;
+      padding: 12px;
+    }
+    .hero-list li { list-style: square; margin-left: 18px; color: var(--muted); }
+
+    .section-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 14px;
+      margin-top: 10px;
+    }
+    .card {
+      border: 2px solid #1b1b1b;
+      background: #0a0a0a;
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(45deg, rgba(122,255,92,0.05), transparent 35%, rgba(255,63,209,0.06));
+      opacity: 0;
+      transition: opacity 120ms ease;
+      mix-blend-mode: screen;
+    }
+    .card:hover::after { opacity: 1; }
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 18px;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      font-family: 'Barlow Condensed', sans-serif;
+    }
+    .meta { color: var(--acid); font-size: 13px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .body { color: var(--muted); font-size: 14px; }
+
+    .archive-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 18px;
+      margin-top: 12px;
+    }
+    .archive-card {
+      position: relative;
+      background: linear-gradient(180deg, #0d0d0d, #050505);
+      border: 2px solid #1a1a1a;
+      padding: 12px;
+      clip-path: polygon(0 0, 92% 0, 100% 14%, 100% 100%, 8% 100%, 0 86%);
+    }
+    .archive-card h3 { margin: 0 0 6px; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 0.02em; }
+    .archive-card p { margin: 0; color: var(--muted); font-size: 14px; }
+    .archive-card img { width: 100%; height: 180px; object-fit: cover; filter: grayscale(1) contrast(1.2); mix-blend-mode: screen; display: block; margin-bottom: 10px; border: 2px solid #222; }
+
+    .about {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    .poster {
+      background: #0b0b0b;
+      border: 2px solid var(--acid);
+      padding: 12px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: -8px 8px 0 var(--acid-2);
+    }
+    .poster::before {
+      content: "underground";
+      position: absolute;
+      left: 12px;
+      top: 10px;
+      color: rgba(255,255,255,0.08);
+      font-size: 26px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+    .poster img { width: 100%; height: auto; display: block; filter: grayscale(1) contrast(1.25); mix-blend-mode: lighten; }
+
+    .contact {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+    .contact a {
+      color: var(--text);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 2px solid #1a1a1a;
+      background: #0b0b0b;
+      text-decoration: none;
+      transition: transform 120ms ease, border-color 120ms ease;
+    }
+    .contact a:hover { transform: translateY(-2px); border-color: var(--acid); }
+
+    .glitch {
+      position: relative;
+      display: inline-block;
+    }
+    .glitch::before, .glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      left: 0; top: 0;
+      mix-blend-mode: screen;
+      opacity: 0;
+      transition: opacity 80ms ease, transform 80ms ease;
+    }
+    .glitch::before { color: var(--acid-2); transform: translate(2px, -2px); }
+    .glitch::after { color: var(--acid); transform: translate(-2px, 2px); }
+    .glitch:hover::before, .glitch:hover::after { opacity: 0.8; }
+
+    .reveal { opacity: 0; transform: translateY(18px); transition: opacity 220ms ease, transform 220ms ease; }
+    .reveal.visible { opacity: 1; transform: translateY(0); }
+
+    @media (max-width: 900px) {
+      .hero { grid-template-columns: 1fr; }
+      .about { grid-template-columns: 1fr; }
+      nav ul { grid-auto-flow: row; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+      .scanlines { display: none; }
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="inline">
-      <h1>VOI – Tableau de bord statique</h1>
-      <span class="pill">Client-side only</span>
+    <div class="nav-bar">
+      <div class="brand">
+        <span class="brand-badge">Occulte</span>
+        <span>Collectif Berlin — CRT LAB</span>
+      </div>
+      <nav aria-label="Navigation principale">
+        <ul>
+          <li><a href="#manifeste" class="glitch" data-text="Manifeste">Manifeste</a></li>
+          <li><a href="#events" class="glitch" data-text="Événements">Événements</a></li>
+          <li><a href="#archive" class="glitch" data-text="Archive">Archive</a></li>
+          <li><a href="#about" class="glitch" data-text="À propos">À propos</a></li>
+          <li><a href="#contact" class="glitch" data-text="Contact">Contact</a></li>
+        </ul>
+      </nav>
     </div>
-    <p>Analyse rapide des flux VOI directement dans le navigateur, sans backend Streamlit. Les exports fournis dans le dépôt sont chargés automatiquement pour illustrer les visualisations.</p>
   </header>
-  <div class="container">
-    <div class="grid">
-      <div class="card">
-        <h2>Données de démonstration</h2>
-        <p class="muted">Les exports NDJSON/CSV sont préchargés depuis le dépôt GitHub pour simplifier l'exploration.</p>
-        <div style="margin-top: 12px; display: flex; gap: 8px;">
-          <button id="demoBtn" type="button">Recharger les données</button>
-        </div>
-      </div>
-      <div class="card">
-        <h2>Résumé</h2>
-        <div class="metrics">
-          <div class="metric"><span class="muted">Événements</span><strong id="eventsCount">–</strong></div>
-          <div class="metric"><span class="muted">Trottinettes</span><strong id="vehiclesCount">–</strong></div>
-          <div class="metric"><span class="muted">Période couverte</span><strong id="dateRange">–</strong></div>
-        </div>
-      </div>
-    </div>
 
-    <div class="card" style="margin-top: 20px;">
-      <h2>Carte & explorateur de trajets</h2>
-      <p class="muted">Une seule carte rassemble les stations et les trajets reconstitués. Cliquez sur une station pour révéler ses flux IN/OUT, filtrer automatiquement les trajets associés et survoler les lignes pour voir les détails.</p>
-      <div class="map-grid" style="margin-top: 12px;">
+  <main>
+    <section id="manifeste" class="layout">
+      <article class="section hero reveal" aria-labelledby="title-manifest">
         <div>
-          <div id="map"></div>
-          <div class="map-legend">
-            <span><span class="legend-dot" style="background:#00f59b;"></span>Stations</span>
-            <span><span class="legend-dot" style="background:#7c3aed;"></span>Lignes de trajets filtrés</span>
-            <span id="mapStatus" class="muted-text"></span>
+          <p class="sticky-label">Manifeste</p>
+          <h1 id="title-manifest">Atelier Occulte — brutal, commun, indocile.</h1>
+          <p>Collectif inter-écoles d'art. Interventions nocturnes, fanzines copiés en sous-sol, radios pirates et archives analogiques. On assemble l'acide et le bruit pour cartographier les lignes de fuite de Berlin.</p>
+          <div class="tagline" aria-label="Mots clés">
+            <span>brutalisme</span>
+            <span>xerox / collage</span>
+            <span>terminal CRT</span>
+            <span>friction urbaine</span>
           </div>
         </div>
-        <div class="panel">
-          <h3>Navigation rapide</h3>
-          <div class="filters-grid">
-            <div class="control">
-              <label for="stationSelect">Station (arrivée ou départ)</label>
-              <select id="stationSelect"></select>
-            </div>
-            <div class="control control-span-2">
-              <label for="startHour">Plage horaire</label>
-              <div class="range-group">
-                <div class="range-stack">
-                  <div id="hourRangeTrack" class="range-track"></div>
-                  <input id="startHour" class="hour-range" type="range" min="0" max="23" value="0" />
-                  <input id="endHour" class="hour-range" type="range" min="0" max="23" value="23" />
-                </div>
-                <div class="range-meta">
-                  <span id="hourRangeLabel" class="hour-summary">00h → 23h</span>
-                  <span class="range-hint">Glissez les curseurs ou appliquez une plage ci-dessous.</span>
-                </div>
-                <div class="quick-ranges">
-                  <button type="button" class="pill-button quick-range" data-range="6-10">Matin (06h-10h)</button>
-                  <button type="button" class="pill-button quick-range" data-range="10-16">Milieu de journée (10h-16h)</button>
-                  <button type="button" class="pill-button quick-range" data-range="16-21">Soirée (16h-21h)</button>
-                  <button type="button" class="pill-button quick-range" data-range="21-5">Nuit (21h-05h)</button>
-                </div>
-              </div>
-            </div>
-            <div class="control">
-              <label>&nbsp;</label>
-              <button id="resetFilters" type="button" class="pill-button">Réinitialiser les filtres</button>
-            </div>
+        <ul class="hero-list" aria-label="Principes">
+          <li>Pas de dark patterns, juste de la clarté radicale.</li>
+          <li>Textures scannées, scans de rue, basse résolution assumée.</li>
+          <li>Navigation brutale : blocs francs, asymétrie contrôlée.</li>
+          <li>Accessibilité : contraste élevé, focus visibles, rythme court.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="events" class="layout">
+      <article class="section reveal" aria-labelledby="events-title">
+        <p class="sticky-label">Agenda</p>
+        <h2 id="events-title">Événements imminents</h2>
+        <div class="section-grid">
+          <div class="card">
+            <div class="meta">23.02 — Atelier cassette</div>
+            <h3>Dub & Bruit</h3>
+            <p class="body">Gravure directe sur bandes magnétiques, découpage à la lame, sessions drones au projecteur 16mm.</p>
           </div>
-          <div class="panel" style="margin-top: 12px;">
-            <h3>Station sélectionnée</h3>
-            <div id="stationDetails" class="muted-text">Cliquez sur une station ou choisissez-la dans la liste pour voir ses flux.</div>
+          <div class="card">
+            <div class="meta">01.03 — Nuit ouverte</div>
+            <h3>Résidence croisée</h3>
+            <p class="body">Installation collective dans un parking brut, scans thermiques, collages sérigraphiés en live.</p>
           </div>
-          <div class="panel" style="margin-top: 12px;">
-            <h3>Trajets filtrés</h3>
-            <div id="tripSummary" class="muted-text"></div>
-            <div style="margin-top: 10px;"><strong>Véhicules</strong></div>
-            <div id="vehiclesList" class="vehicle-list"></div>
+          <div class="card">
+            <div class="meta">09.03 — Bal clandestin</div>
+            <h3>CRT Social Club</h3>
+            <p class="body">DJ set monochrome, visual glitch minimal, écran cathodique détourné en fresque lumineuse.</p>
+          </div>
+          <div class="card">
+            <div class="meta">16.03 — Radio</div>
+            <h3>Transmission / Bruit</h3>
+            <p class="body">Émission pirate en duplex, voix compressées, correspondances entre ateliers européens.</p>
           </div>
         </div>
-      </div>
-    </div>
+      </article>
+    </section>
 
-    <div class="card" style="margin-top: 20px;">
-      <h2>Détails</h2>
-      <p class="muted">Vue condensée façon « black hat » : filtres IN/OUT, tri chronologique et association des métadonnées stations restent identiques à la version Streamlit, tout en tenant sur une page fixe.</p>
-    </div>
+    <section id="archive" class="layout">
+      <article class="section reveal" aria-labelledby="archive-title">
+        <p class="sticky-label">Archive</p>
+        <h2 id="archive-title">Fragments & traces</h2>
+        <div class="archive-grid">
+          <article class="archive-card">
+            <img src="https://images.unsplash.com/photo-1478720568477-152d9b164e26?auto=format&fit=crop&w=800&q=60" alt="Affiche déchirée en noir et blanc" loading="lazy" />
+            <div class="meta">Affiche / Xerox</div>
+            <h3>Rue de Wedding</h3>
+            <p>Affichage sauvage, typographie condensée, scotch fluorescent, scans superposés.</p>
+          </article>
+          <article class="archive-card">
+            <img src="https://images.unsplash.com/photo-1545239351-1141bd82e8a6?auto=format&fit=crop&w=800&q=60" alt="Câbles et écrans CRT" loading="lazy" />
+            <div class="meta">Installation</div>
+            <h3>Noise Cathedral</h3>
+            <p>Tour de CRT synchronisés, glitch audio, diffusion d'archives ouvertes.</p>
+          </article>
+          <article class="archive-card">
+            <img src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=800&q=60" alt="Fanzines empilés" loading="lazy" />
+            <div class="meta">Édition</div>
+            <h3>Fanzine XIV</h3>
+            <p>Trames risographiées, interviews codées, poster plié et perforé, agrafes visibles.</p>
+          </article>
+          <article class="archive-card">
+            <img src="https://images.unsplash.com/photo-1473186578172-c141e6798cf4?auto=format&fit=crop&w=800&q=60" alt="Danse dans un entrepôt" loading="lazy" />
+            <div class="meta">Performance</div>
+            <h3>Marée Noire</h3>
+            <p>Chorégraphie industrielle, brouillard dense, éclairages phosphorescents minimalistes.</p>
+          </article>
+        </div>
+      </article>
+    </section>
 
-    <div class="footer">Source : <a href="https://github.com/tokojimo/VOI" target="_blank" rel="noopener">tokojimo/VOI</a>. Cette page fonctionne sur GitHub Pages ou tout serveur statique.</div>
-  </div>
+    <section id="about" class="layout">
+      <article class="section about reveal" aria-labelledby="about-title">
+        <div>
+          <p class="sticky-label">À propos</p>
+          <h2 id="about-title">Collectif en clair-obscur</h2>
+          <p class="body">Nous sommes une constellation d'étudiant·es, d'artisan·es et d'agitateurs nocturnes. Les protocoles sont ouverts : codes partagés, impressions libres, scénographies démontables. Chaque session documente le contexte urbain et laisse des archives libres d'accès.</p>
+          <div class="section-grid" aria-label="Engagements">
+            <div class="card">
+              <div class="meta">Accessibilité</div>
+              <p class="body">Contraste fort, focus visibles, rythme rapide mais option de réduire le mouvement.</p>
+            </div>
+            <div class="card">
+              <div class="meta">Éthique</div>
+              <p class="body">Aucune tromperie : pas de popups mensongers, pas de dark patterns, juste l'essentiel.</p>
+            </div>
+            <div class="card">
+              <div class="meta">Écoute</div>
+              <p class="body">Programmation ouverte aux quartiers périphériques, invitations à collaborer et à documenter.</p>
+            </div>
+          </div>
+        </div>
+        <div class="poster" aria-hidden="true">
+          <img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=800&q=60" alt="Texture papier et collage noir et blanc" loading="lazy" />
+        </div>
+      </article>
+    </section>
+
+    <section id="contact" class="layout">
+      <article class="section reveal" aria-labelledby="contact-title">
+        <p class="sticky-label">Contact</p>
+        <h2 id="contact-title">Rejoindre la fréquence</h2>
+        <p class="body">Inscris-toi pour les sessions ou propose un échange. Aucun piège : liens directs, infos brutes.</p>
+        <div class="contact" aria-label="Liens de contact">
+          <a href="mailto:radio@atelier-occulte.berlin" class="glitch" data-text="Email">Email → radio@atelier-occulte.berlin</a>
+          <a href="https://instagram.com" target="_blank" rel="noreferrer" class="glitch" data-text="Instagram">Instagram — logbook</a>
+          <a href="https://t.me" target="_blank" rel="noreferrer" class="glitch" data-text="Canal">Canal chiffré</a>
+          <a href="https://soundcloud.com" target="_blank" rel="noreferrer" class="glitch" data-text="Radio">Radio pirate</a>
+        </div>
+      </article>
+    </section>
+  </main>
 
   <script>
-    const parisOffsetMinutes = new Date().getTimezoneOffset();
-
-    async function readFileText(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsText(file);
-      });
-    }
-
-    function parseTimestamp(row) {
-      if (!row) return null;
-      const iso = row.t_iso;
-      const ms = row.t_ms;
-      const misc = row.t;
-      let date = null;
-      if (iso) {
-        date = new Date(iso);
-      } else if (ms) {
-        date = new Date(Number(ms));
-      } else if (typeof misc === 'string' && misc.startsWith('/Date(')) {
-        const value = Number(misc.replace(/\D/g, ''));
-        date = new Date(value);
-      }
-      return isNaN(date?.getTime()) ? null : date;
-    }
-
-    function normalizeStationName(row) {
-      return row.station_name || row.name || row.station || null;
-    }
-
-    function parseNdjson(content) {
-      return content
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean)
-        .map((line) => {
-          try { return JSON.parse(line); } catch { return null; }
-        })
-        .filter(Boolean);
-    }
-
-    function normalizeType(type) {
-      const normalized = (type || '').toString().toUpperCase();
-      return normalized === 'INIT' ? 'IN' : normalized;
-    }
-
-    function filterEvents(rows) {
-      return rows
-        .map((row) => ({ ...row, type: normalizeType(row.type), ts: parseTimestamp(row) }))
-        .filter((row) => row.ts && (row.type === 'IN' || row.type === 'OUT'))
-        .sort((a, b) => a.ts - b.ts);
-    }
-
-    function attachStations(events, stations) {
-      if (!stations.length) return events.map((e) => ({ ...e, station_name: normalizeStationName(e) }));
-      const byId = new Map(stations.map((s) => [String(s.station_id), s]));
-      return events.map((e) => {
-        const meta = byId.get(String(e.station_id)) || {};
-        return {
-          ...e,
-          station_name: meta.station_name || meta.name || e.station_name || e.station || null,
-          lat: meta.lat,
-          lon: meta.lon,
-        };
-      });
-    }
-
-    function aggregateStations(events) {
-      const map = new Map();
-      for (const e of events) {
-        const key = e.station_id || e.station || 'unknown';
-        const entry = map.get(key) || {
-          station_id: key,
-          name: e.station_name || String(key),
-          IN: 0,
-          OUT: 0,
-          lat: e.lat,
-          lon: e.lon,
-        };
-        entry[e.type] = (entry[e.type] || 0) + 1;
-        entry.lat = entry.lat ?? e.lat;
-        entry.lon = entry.lon ?? e.lon;
-        map.set(key, entry);
-      }
-      return Array.from(map.values());
-    }
-
-    function updateSummary(events) {
-      const count = events.length;
-      const vehicles = new Set(events.map((e) => e.v)).size;
-      const dates = events.map((e) => e.ts.getTime());
-      const min = dates.length ? new Date(Math.min(...dates)) : null;
-      const max = dates.length ? new Date(Math.max(...dates)) : null;
-      document.getElementById('eventsCount').textContent = count ? count.toLocaleString('fr-FR') : '–';
-      document.getElementById('vehiclesCount').textContent = vehicles || '–';
-      document.getElementById('dateRange').textContent = min ? `${min.toISOString().slice(0, 10)} → ${max.toISOString().slice(0, 10)}` : '–';
-    }
-
-    let mapInstance = null;
-    let stationLayerGroup = null;
-    let tripLayerGroup = null;
-
-    const uiState = {
-      events: [],
-      stations: [],
-      trips: [],
-      filteredTrips: [],
-      stationAggregates: [],
-      selectedStation: 'all',
-      hourStart: 0,
-      hourEnd: 23,
-      selectedVehicle: null,
-    };
-
-    function clampHour(value) {
-      const parsed = Number(value);
-      if (Number.isNaN(parsed)) return 0;
-      return Math.max(0, Math.min(23, Math.round(parsed)));
-    }
-
-    function formatHourRange(start, end) {
-      return `${String(start).padStart(2, '0')}h → ${String(end).padStart(2, '0')}h`;
-    }
-
-    function updateHourRangeUI() {
-      const track = document.getElementById('hourRangeTrack');
-      const label = document.getElementById('hourRangeLabel');
-      const start = clampHour(uiState.hourStart);
-      const end = clampHour(uiState.hourEnd);
-      if (label) label.textContent = `${formatHourRange(start, end)}${start > end ? ' (bascule minuit)' : ''}`;
-      if (!track) return;
-      const startPct = (start / 23) * 100;
-      const endPct = (end / 23) * 100;
-      if (start <= end) {
-        track.style.background = `linear-gradient(to right, #0b1020 0%, #0b1020 ${startPct}%, var(--accent) ${startPct}%, var(--accent) ${endPct}%, #0b1020 ${endPct}%, #0b1020 100%)`;
-      } else {
-        track.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${endPct}%, #0b1020 ${endPct}%, #0b1020 ${startPct}%, var(--accent) ${startPct}%, var(--accent) 100%)`;
-      }
-    }
-
-    function applyHourRange(start, end) {
-      uiState.hourStart = clampHour(start);
-      uiState.hourEnd = clampHour(end);
-      const startInput = document.getElementById('startHour');
-      const endInput = document.getElementById('endHour');
-      if (startInput) startInput.value = uiState.hourStart;
-      if (endInput) endInput.value = uiState.hourEnd;
-      updateHourRangeUI();
-      filterTrips();
-    }
-
-    function ensureMap() {
-      if (!mapInstance) {
-        mapInstance = L.map('map').setView([45.1885, 5.7245], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          attribution: '&copy; OpenStreetMap contributors',
-          maxZoom: 19,
-        }).addTo(mapInstance);
-        stationLayerGroup = L.layerGroup().addTo(mapInstance);
-        tripLayerGroup = L.layerGroup().addTo(mapInstance);
-      }
-    }
-
-    function updateStationDetails() {
-      const panel = document.getElementById('stationDetails');
-      if (!panel) return;
-      if (uiState.selectedStation === 'all') {
-        panel.textContent = 'Cliquez sur une station ou choisissez-la dans la liste pour voir ses flux.';
-        return;
-      }
-      const station = uiState.stationAggregates.find((s) => String(s.station_id) === String(uiState.selectedStation));
-      if (!station) {
-        panel.textContent = 'Station non trouvée dans les données chargées.';
-        return;
-      }
-      const relatedTrips = uiState.filteredTrips.filter(
-        (t) => String(t.startStationId) === String(station.station_id) || String(t.endStationId) === String(station.station_id)
-      );
-      panel.innerHTML = `
-        <div style="font-weight: 700; margin-bottom: 4px;">${station.name || 'Station inconnue'}</div>
-        <div class="chip-row" style="margin-bottom: 8px;">
-          <span class="chip">IN : ${station.IN || 0}</span>
-          <span class="chip">OUT : ${station.OUT || 0}</span>
-          <span class="chip">Total : ${(station.IN || 0) + (station.OUT || 0)}</span>
-        </div>
-        <div class="muted-text">Trajets filtrés liés : ${relatedTrips.length}</div>
-        <div class="muted-text">Coordonnées : ${station.lat && station.lon ? `${station.lat.toFixed(5)}, ${station.lon.toFixed(5)}` : 'non renseignées'}</div>
-      `;
-    }
-
-    function renderStationsOnMap(stations) {
-      ensureMap();
-      stationLayerGroup.clearLayers();
-      const withCoords = stations.filter((s) => s.lat && s.lon);
-      const bounds = [];
-      const status = document.getElementById('mapStatus');
-      if (!withCoords.length) {
-        mapInstance.setView([45.1885, 5.7245], 13);
-        if (status) status.textContent = 'Aucune station géolocalisée dans les données chargées.';
-        return [];
-      }
-
-      for (const station of withCoords) {
-        const total = (station.IN || 0) + (station.OUT || 0);
-        const isActive = String(uiState.selectedStation) === String(station.station_id);
-        const marker = L.circleMarker([station.lat, station.lon], {
-          radius: Math.max(7, Math.min(16, total / 8)),
-          color: isActive ? '#ff9f0a' : '#00f59b',
-          weight: isActive ? 3 : 1.5,
-          fillColor: '#7c3aed',
-          fillOpacity: 0.7,
-        }).bindPopup(
-          `<strong>${station.name || 'Station inconnue'}</strong><br/>IN: ${station.IN || 0}<br/>OUT: ${station.OUT || 0}<br/>Total: ${total}`
-        );
-        marker.on('click', () => {
-          uiState.selectedStation = String(station.station_id);
-          document.getElementById('stationSelect').value = String(station.station_id);
-          updateStationDetails();
-          filterTrips();
-          mapInstance.flyTo([station.lat, station.lon], Math.max(mapInstance.getZoom(), 14));
-        });
-        marker.addTo(stationLayerGroup);
-        bounds.push([station.lat, station.lon]);
-      }
-
-      if (status) {
-        status.textContent = `${withCoords.length} station(s) géolocalisée(s) – cliquez pour filtrer.`;
-      }
-      return bounds;
-    }
-
-    function renderTripsOnMap() {
-      ensureMap();
-      tripLayerGroup.clearLayers();
-      const bounds = [];
-      uiState.filteredTrips.forEach((trip) => {
-        if (trip.startLat && trip.startLon && trip.endLat && trip.endLon) {
-          const isFocusedVehicle = uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle;
-          const color = isFocusedVehicle ? '#ff9f0a' : '#7c3aed';
-          const line = L.polyline(
-            [
-              [trip.startLat, trip.startLon],
-              [trip.endLat, trip.endLon],
-            ],
-            {
-              color,
-              weight: isFocusedVehicle ? 5 : 3.2,
-              opacity: 0.9,
-            }
-          ).bindPopup(
-            `<div><strong>Véhicule ${trip.vehicle}</strong><br/>${trip.startName} → ${trip.endName}<br/>Durée : ${trip.durationMin.toFixed(1)} min</div>`
-          );
-          line.addTo(tripLayerGroup);
-          const angle = (Math.atan2(trip.endLat - trip.startLat, trip.endLon - trip.startLon) * 180) / Math.PI;
-          const arrow = L.marker([trip.endLat, trip.endLon], {
-            interactive: false,
-            icon: L.divIcon({
-              className: 'trip-arrow',
-              html: `<div class="arrow-head" style="--arrow-color:${color}; --angle:${angle}deg;"></div>`,
-              iconSize: [16, 16],
-              iconAnchor: [8, 8],
-            }),
-          });
-          arrow.addTo(tripLayerGroup);
-          bounds.push([trip.startLat, trip.startLon], [trip.endLat, trip.endLon]);
-        }
-      });
-      return bounds;
-    }
-
-    function renderMap(stations) {
-      uiState.stationAggregates = stations;
-      const stationBounds = renderStationsOnMap(stations);
-      const tripBounds = renderTripsOnMap();
-      const combinedBounds = [...stationBounds, ...tripBounds];
-      if (combinedBounds.length) {
-        mapInstance.fitBounds(combinedBounds, { padding: [18, 18] });
-      }
-    }
-
-    function buildTrips(events, toleranceHours = 12) {
-      const byVehicle = new Map();
-      const trips = [];
-      const maxDelta = toleranceHours * 60 * 60 * 1000;
-      for (const evt of events) {
-        if (!evt?.ts) continue;
-        if (evt.type === 'OUT') {
-          byVehicle.set(evt.v, evt);
-        } else if (evt.type === 'IN') {
-          const prev = byVehicle.get(evt.v);
-          if (prev && evt.ts - prev.ts <= maxDelta) {
-            trips.push({
-              vehicle: evt.v,
-              startTs: prev.ts,
-              endTs: evt.ts,
-              startStationId: prev.station_id ?? prev.station ?? 'unknown',
-              endStationId: evt.station_id ?? evt.station ?? 'unknown',
-              startName: prev.station_name || prev.station || 'Station inconnue',
-              endName: evt.station_name || evt.station || 'Station inconnue',
-              startLat: prev.lat,
-              startLon: prev.lon,
-              endLat: evt.lat,
-              endLon: evt.lon,
-              durationMin: (evt.ts - prev.ts) / 60000,
-            });
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!prefersReducedMotion && 'IntersectionObserver' in window) {
+      const observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('visible');
+            observer.unobserve(entry.target);
           }
-          byVehicle.delete(evt.v);
-        }
-      }
-      return trips;
-    }
-
-    function populateStationSelect(stations) {
-      const select = document.getElementById('stationSelect');
-      select.innerHTML = '';
-      const allOption = document.createElement('option');
-      allOption.value = 'all';
-      allOption.textContent = 'Toutes les stations';
-      select.appendChild(allOption);
-      stations
-        .filter((s) => s.station_id !== undefined)
-        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
-        .forEach((station) => {
-          const opt = document.createElement('option');
-          opt.value = String(station.station_id);
-          opt.textContent = station.name || station.station_id;
-          select.appendChild(opt);
         });
-      select.value = uiState.selectedStation || 'all';
+      }, { threshold: 0.18 });
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+    } else {
+      document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
     }
-
-    function filterTrips() {
-      const { selectedStation, hourStart, hourEnd, selectedVehicle } = uiState;
-      const normalizedStart = Math.max(0, Math.min(23, Number(hourStart)));
-      const normalizedEnd = Math.max(0, Math.min(23, Number(hourEnd)));
-      const inRange = (date) => {
-        const h = date.getHours();
-        if (normalizedStart <= normalizedEnd) return h >= normalizedStart && h <= normalizedEnd;
-        return h >= normalizedStart || h <= normalizedEnd;
-      };
-      const filtered = uiState.trips.filter((trip) => {
-        const stationMatch =
-          selectedStation === 'all' ||
-          String(trip.startStationId) === String(selectedStation) ||
-          String(trip.endStationId) === String(selectedStation);
-        const hourMatch = inRange(trip.startTs) || inRange(trip.endTs);
-        const vehicleMatch = !selectedVehicle || trip.vehicle === selectedVehicle;
-        return stationMatch && hourMatch && vehicleMatch;
-      });
-      uiState.filteredTrips = filtered;
-      updateStationDetails();
-      renderTripSummary();
-      renderVehicleList();
-      const stationBounds = renderStationsOnMap(uiState.stationAggregates);
-      const tripBounds = renderTripsOnMap();
-      const combinedBounds = [...stationBounds, ...tripBounds];
-      if (combinedBounds.length) {
-        mapInstance.fitBounds(combinedBounds, { padding: [18, 18] });
-      }
-    }
-
-    function renderTripSummary() {
-      const summary = document.getElementById('tripSummary');
-      if (!uiState.trips.length) {
-        summary.textContent = 'Aucun trajet reconstitué pour les données chargées.';
-        return;
-      }
-      const vehicles = new Set(uiState.filteredTrips.map((t) => t.vehicle)).size;
-      const wrapsMidnight = uiState.hourStart > uiState.hourEnd;
-      summary.textContent = `${uiState.filteredTrips.length} trajets – ${vehicles} véhicule(s) – plage ${formatHourRange(uiState.hourStart, uiState.hourEnd)}${wrapsMidnight ? ' (traverse minuit)' : ''}.`;
-    }
-
-    function renderVehicleList() {
-      const container = document.getElementById('vehiclesList');
-      container.innerHTML = '';
-      const vehicles = Array.from(new Set(uiState.trips.map((t) => t.vehicle)));
-      const filteredVehicles = new Set(uiState.filteredTrips.map((t) => t.vehicle));
-      const orderedVehicles = vehicles
-        .map((vehicle) => ({
-          vehicle,
-          count: uiState.filteredTrips.filter((t) => t.vehicle === vehicle).length,
-          inFilter: filteredVehicles.has(vehicle),
-        }))
-        .sort((a, b) => {
-          if (a.inFilter !== b.inFilter) return a.inFilter ? -1 : 1;
-          if (a.inFilter && b.inFilter) return b.count - a.count || a.vehicle.localeCompare(b.vehicle);
-          return a.vehicle.localeCompare(b.vehicle);
-        });
-
-      orderedVehicles.forEach(({ vehicle, count, inFilter }) => {
-        const button = document.createElement('div');
-        button.className = `vehicle-item${uiState.selectedVehicle === vehicle ? ' active' : ''}`;
-        button.textContent = count ? `${vehicle} (${count})` : `${vehicle} (hors filtre)`;
-        button.style.opacity = inFilter ? '1' : '0.4';
-        button.addEventListener('click', () => {
-          uiState.selectedVehicle = uiState.selectedVehicle === vehicle ? null : vehicle;
-          filterTrips();
-        });
-        container.appendChild(button);
-      });
-      if (!vehicles.length) {
-        container.innerHTML = '<span class="muted-text">Aucun véhicule détecté.</span>';
-      }
-    }
-
-
-    async function parseCsv(text) {
-      const parseCoordinate = (value) => {
-        if (value === undefined || value === null || value === '') return null;
-        if (typeof value === 'number') return value;
-        const normalized = value.toString().replace(',', '.');
-        const parsed = Number.parseFloat(normalized);
-        return Number.isFinite(parsed) ? parsed : null;
-      };
-
-      const normalizeRow = (row) => {
-        const cleaned = {};
-        for (const [key, value] of Object.entries(row)) {
-          const normalizedKey = key.replace(/^\ufeff/, '').trim();
-          cleaned[normalizedKey] = value;
-        }
-        return cleaned;
-      };
-
-      return new Promise((resolve, reject) => {
-        Papa.parse(text, {
-          header: true,
-          skipEmptyLines: true,
-          complete: (results) => {
-            const normalized = results.data.map((rawRow) => {
-              const row = normalizeRow(rawRow);
-              return {
-                ...row,
-                station_id: row.station_id ?? row.id ?? row.station ?? row['station id'],
-                lat: parseCoordinate(row.lat),
-                lon: parseCoordinate(row.lon),
-              };
-            });
-            resolve(normalized);
-          },
-          error: reject,
-        });
-      });
-    }
-
-    async function handleFiles(ndjsonFiles, stationFile) {
-      const ndjsonContents = await Promise.all(ndjsonFiles.map(readFileText));
-      const rawEvents = ndjsonContents.flatMap(parseNdjson);
-      const filtered = filterEvents(rawEvents);
-      const stationContent = stationFile ? await readFileText(stationFile) : null;
-      const stations = stationContent ? await parseCsv(stationContent) : [];
-      const enriched = attachStations(filtered, stations);
-      uiState.events = enriched;
-      uiState.stations = stations;
-      uiState.trips = buildTrips(enriched);
-      updateSummary(enriched);
-      const stationAggregates = aggregateStations(enriched);
-      renderMap(stationAggregates);
-      populateStationSelect(stationAggregates);
-      filterTrips();
-    }
-
-    function buildDemoUrls(filename) {
-      const sameOrigin = new URL(filename, window.location.href).toString();
-      return [
-        sameOrigin,
-        `https://tokojimo.github.io/VOI/${filename}`,
-        `https://raw.githubusercontent.com/tokojimo/VOI/main/${filename}`,
-      ];
-    }
-
-    async function fetchWithFallback(urls) {
-      const errors = [];
-      for (const url of urls) {
-        try {
-          const response = await fetch(url);
-          if (response.ok) return response.text();
-          errors.push(`${url} → ${response.status}`);
-        } catch (err) {
-          errors.push(`${url} → ${err.message}`);
-        }
-      }
-      throw new Error(`Aucune des URLs suivantes n'a pu être chargée :\n${errors.join('\n')}`);
-    }
-
-    async function loadDemo() {
-      try {
-        const ndjsonText = await fetchWithFallback(
-          buildDemoUrls('voi_gbfs_grenoble_20251205_180959.ndjson')
-        );
-
-        const stationsText = await fetchWithFallback(
-          buildDemoUrls('voi_stations_grenoble_20251213_175232.csv')
-        );
-
-        const rawEvents = parseNdjson(ndjsonText);
-        const filtered = filterEvents(rawEvents);
-        const stations = await parseCsv(stationsText);
-        const enriched = attachStations(filtered, stations);
-        uiState.events = enriched;
-        uiState.stations = stations;
-        uiState.trips = buildTrips(enriched);
-        updateSummary(enriched);
-        const stationAggregates = aggregateStations(enriched);
-        renderMap(stationAggregates);
-        populateStationSelect(stationAggregates);
-        filterTrips();
-      } catch (err) {
-        console.error(err);
-        alert(`Impossible de charger les fichiers de démonstration.\n${err.message}`);
-      }
-    }
-
-    document.getElementById('demoBtn').addEventListener('click', loadDemo);
-    document.getElementById('stationSelect').addEventListener('change', (event) => {
-      uiState.selectedStation = event.target.value;
-      filterTrips();
-    });
-    const hourInputs = ['startHour', 'endHour'];
-    hourInputs.forEach((id) => {
-      const input = document.getElementById(id);
-      input.addEventListener('input', () => {
-        applyHourRange(document.getElementById('startHour').value, document.getElementById('endHour').value);
-      });
-    });
-    document.querySelectorAll('.quick-range').forEach((button) => {
-      button.addEventListener('click', () => {
-        const [start, end] = button.dataset.range.split('-').map(Number);
-        applyHourRange(start, end);
-      });
-    });
-    document.getElementById('resetFilters').addEventListener('click', () => {
-      uiState.selectedStation = 'all';
-      uiState.selectedVehicle = null;
-      document.getElementById('stationSelect').value = 'all';
-      applyHourRange(0, 23);
-    });
-    updateHourRangeUI();
-    loadDemo();
   </script>
 </body>
 </html>
