@@ -122,12 +122,16 @@
     a { color: #22d3ee; }
     .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     .control { display: flex; flex-direction: column; gap: 6px; }
+    .control-span-2 { grid-column: span 2; }
     select, input[type="number"], input[type="datetime-local"] {
       background: #f8fafc;
       border: 1px solid var(--border);
       color: var(--text);
       padding: 10px 12px;
       border-radius: 12px;
+    }
+    input[type="range"] {
+      accent-color: #0a84ff;
     }
     .pill-button {
       border: 1px solid var(--border);
@@ -152,6 +156,61 @@
     .chip { padding: 8px 10px; background: rgba(15, 23, 42, 0.04); border: 1px solid var(--border); border-radius: 12px; font-weight: 600; }
     .map-legend { display: flex; gap: 10px; align-items: center; margin-top: 10px; color: var(--muted); font-size: 13px; }
     .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+    .range-group { display: flex; flex-direction: column; gap: 10px; }
+    .range-stack { position: relative; height: 44px; }
+    .range-track {
+      position: absolute;
+      inset: 18px 0;
+      height: 10px;
+      border-radius: 999px;
+      background: linear-gradient(to right, #e5e7eb 0%, #e5e7eb 100%);
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+    .hour-range {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      background: transparent;
+      pointer-events: none;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    .hour-range::-webkit-slider-thumb {
+      pointer-events: all;
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #0a84ff;
+      border: 2px solid #fff;
+      box-shadow: 0 4px 10px rgba(10, 132, 255, 0.35);
+    }
+    .hour-range::-moz-range-thumb {
+      pointer-events: all;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #0a84ff;
+      border: 2px solid #fff;
+      box-shadow: 0 4px 10px rgba(10, 132, 255, 0.35);
+    }
+    .hour-range::-moz-range-track { background: transparent; }
+    .range-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .hour-summary { font-weight: 700; }
+    .range-hint { color: var(--muted); font-size: 14px; }
+    .quick-ranges { display: flex; gap: 8px; flex-wrap: wrap; }
+    .quick-ranges .pill-button { padding: 7px 10px; font-weight: 600; }
+    .trip-arrow { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; }
+    .trip-arrow .arrow-head {
+      width: 0;
+      height: 0;
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-bottom: 12px solid var(--arrow-color, #0a84ff);
+      transform: rotate(var(--angle, 0deg)) scale(0.9);
+      filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.35));
+    }
   </style>
 </head>
 <body>
@@ -205,13 +264,25 @@
               <label for="stationSelect">Station (arrivée ou départ)</label>
               <select id="stationSelect"></select>
             </div>
-            <div class="control">
-              <label for="startHour">Heure de début</label>
-              <input id="startHour" type="number" min="0" max="23" value="0" />
-            </div>
-            <div class="control">
-              <label for="endHour">Heure de fin</label>
-              <input id="endHour" type="number" min="0" max="23" value="23" />
+            <div class="control control-span-2">
+              <label for="startHour">Plage horaire</label>
+              <div class="range-group">
+                <div class="range-stack">
+                  <div id="hourRangeTrack" class="range-track"></div>
+                  <input id="startHour" class="hour-range" type="range" min="0" max="23" value="0" />
+                  <input id="endHour" class="hour-range" type="range" min="0" max="23" value="23" />
+                </div>
+                <div class="range-meta">
+                  <span id="hourRangeLabel" class="hour-summary">00h → 23h</span>
+                  <span class="range-hint">Glissez les curseurs ou appliquez une plage ci-dessous.</span>
+                </div>
+                <div class="quick-ranges">
+                  <button type="button" class="pill-button quick-range" data-range="6-10">Matin (06h-10h)</button>
+                  <button type="button" class="pill-button quick-range" data-range="10-16">Milieu de journée (10h-16h)</button>
+                  <button type="button" class="pill-button quick-range" data-range="16-21">Soirée (16h-21h)</button>
+                  <button type="button" class="pill-button quick-range" data-range="21-5">Nuit (21h-05h)</button>
+                </div>
+              </div>
             </div>
             <div class="control">
               <label>&nbsp;</label>
@@ -411,6 +482,43 @@
       selectedVehicle: null,
     };
 
+    function clampHour(value) {
+      const parsed = Number(value);
+      if (Number.isNaN(parsed)) return 0;
+      return Math.max(0, Math.min(23, Math.round(parsed)));
+    }
+
+    function formatHourRange(start, end) {
+      return `${String(start).padStart(2, '0')}h → ${String(end).padStart(2, '0')}h`;
+    }
+
+    function updateHourRangeUI() {
+      const track = document.getElementById('hourRangeTrack');
+      const label = document.getElementById('hourRangeLabel');
+      const start = clampHour(uiState.hourStart);
+      const end = clampHour(uiState.hourEnd);
+      if (label) label.textContent = `${formatHourRange(start, end)}${start > end ? ' (bascule minuit)' : ''}`;
+      if (!track) return;
+      const startPct = (start / 23) * 100;
+      const endPct = (end / 23) * 100;
+      if (start <= end) {
+        track.style.background = `linear-gradient(to right, #e5e7eb 0%, #e5e7eb ${startPct}%, #0a84ff ${startPct}%, #0a84ff ${endPct}%, #e5e7eb ${endPct}%, #e5e7eb 100%)`;
+      } else {
+        track.style.background = `linear-gradient(to right, #0a84ff 0%, #0a84ff ${endPct}%, #e5e7eb ${endPct}%, #e5e7eb ${startPct}%, #0a84ff ${startPct}%, #0a84ff 100%)`;
+      }
+    }
+
+    function applyHourRange(start, end) {
+      uiState.hourStart = clampHour(start);
+      uiState.hourEnd = clampHour(end);
+      const startInput = document.getElementById('startHour');
+      const endInput = document.getElementById('endHour');
+      if (startInput) startInput.value = uiState.hourStart;
+      if (endInput) endInput.value = uiState.hourEnd;
+      updateHourRangeUI();
+      filterTrips();
+    }
+
     function ensureMap() {
       if (!mapInstance) {
         mapInstance = L.map('map').setView([45.1885, 5.7245], 13);
@@ -498,13 +606,14 @@
       uiState.filteredTrips.forEach((trip) => {
         if (trip.startLat && trip.startLon && trip.endLat && trip.endLon) {
           const isFocusedVehicle = uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle;
+          const color = isFocusedVehicle ? '#ff9f0a' : '#0a84ff';
           const line = L.polyline(
             [
               [trip.startLat, trip.startLon],
               [trip.endLat, trip.endLon],
             ],
             {
-              color: isFocusedVehicle ? '#ff9f0a' : '#0a84ff',
+              color,
               weight: isFocusedVehicle ? 5 : 3.2,
               opacity: 0.9,
             }
@@ -512,6 +621,17 @@
             `<div><strong>Véhicule ${trip.vehicle}</strong><br/>${trip.startName} → ${trip.endName}<br/>Durée : ${trip.durationMin.toFixed(1)} min</div>`
           );
           line.addTo(tripLayerGroup);
+          const angle = (Math.atan2(trip.endLat - trip.startLat, trip.endLon - trip.startLon) * 180) / Math.PI;
+          const arrow = L.marker([trip.endLat, trip.endLon], {
+            interactive: false,
+            icon: L.divIcon({
+              className: 'trip-arrow',
+              html: `<div class="arrow-head" style="--arrow-color:${color}; --angle:${angle}deg;"></div>`,
+              iconSize: [16, 16],
+              iconAnchor: [8, 8],
+            }),
+          });
+          arrow.addTo(tripLayerGroup);
           bounds.push([trip.startLat, trip.startLon], [trip.endLat, trip.endLon]);
         }
       });
@@ -579,10 +699,6 @@
       select.value = uiState.selectedStation || 'all';
     }
 
-    function formatHourRange(start, end) {
-      return `${String(start).padStart(2, '0')}h-${String(end).padStart(2, '0')}h`;
-    }
-
     function filterTrips() {
       const { selectedStation, hourStart, hourEnd, selectedVehicle } = uiState;
       const normalizedStart = Math.max(0, Math.min(23, Number(hourStart)));
@@ -620,7 +736,8 @@
         return;
       }
       const vehicles = new Set(uiState.filteredTrips.map((t) => t.vehicle)).size;
-      summary.textContent = `${uiState.filteredTrips.length} trajets – ${vehicles} véhicule(s) – plage ${formatHourRange(uiState.hourStart, uiState.hourEnd)}.`;
+      const wrapsMidnight = uiState.hourStart > uiState.hourEnd;
+      summary.textContent = `${uiState.filteredTrips.length} trajets – ${vehicles} véhicule(s) – plage ${formatHourRange(uiState.hourStart, uiState.hourEnd)}${wrapsMidnight ? ' (traverse minuit)' : ''}.`;
     }
 
     function renderVehicleList() {
@@ -762,24 +879,26 @@
       uiState.selectedStation = event.target.value;
       filterTrips();
     });
-    document.getElementById('startHour').addEventListener('change', (event) => {
-      uiState.hourStart = Number(event.target.value);
-      filterTrips();
+    const hourInputs = ['startHour', 'endHour'];
+    hourInputs.forEach((id) => {
+      const input = document.getElementById(id);
+      input.addEventListener('input', () => {
+        applyHourRange(document.getElementById('startHour').value, document.getElementById('endHour').value);
+      });
     });
-    document.getElementById('endHour').addEventListener('change', (event) => {
-      uiState.hourEnd = Number(event.target.value);
-      filterTrips();
+    document.querySelectorAll('.quick-range').forEach((button) => {
+      button.addEventListener('click', () => {
+        const [start, end] = button.dataset.range.split('-').map(Number);
+        applyHourRange(start, end);
+      });
     });
     document.getElementById('resetFilters').addEventListener('click', () => {
       uiState.selectedStation = 'all';
       uiState.selectedVehicle = null;
-      uiState.hourStart = 0;
-      uiState.hourEnd = 23;
       document.getElementById('stationSelect').value = 'all';
-      document.getElementById('startHour').value = 0;
-      document.getElementById('endHour').value = 23;
-      filterTrips();
+      applyHourRange(0, 23);
     });
+    updateHourRangeUI();
     loadDemo();
   </script>
 </body>
