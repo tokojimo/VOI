@@ -97,8 +97,33 @@
     #charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
     .plot { min-height: 320px; }
     #map { height: 420px; border-radius: 12px; overflow: hidden; }
+    #routeMap { height: 460px; border-radius: 12px; overflow: hidden; margin-top: 12px; }
     .footer { margin-top: 32px; color: var(--muted); font-size: 14px; }
     a { color: #22d3ee; }
+    .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .control { display: flex; flex-direction: column; gap: 6px; }
+    select, input[type="number"], input[type="datetime-local"] {
+      background: #0b1220;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 8px;
+    }
+    .pill-button {
+      border: 1px solid var(--border);
+      background: #0b1220;
+      color: var(--text);
+      padding: 8px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .pill-button:hover { border-color: #3b82f6; }
+    .vehicle-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .vehicle-item { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: #0b1220; cursor: pointer; }
+    .vehicle-item.active { border-color: #22d3ee; box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4); }
+    .muted-text { color: var(--muted); font-size: 14px; }
+    .badge { background: rgba(34, 211, 238, 0.15); color: var(--text); padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(34, 211, 238, 0.4); font-size: 12px; }
   </style>
 </head>
 <body>
@@ -136,6 +161,35 @@
     <div class="card" style="margin-top: 20px;">
       <h2>Carte des stations</h2>
       <div id="map"></div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <h2>Explorateur de trajets</h2>
+      <p class="muted">Choisissez une station et une plage horaire pour afficher les trajets reconstruits. Cliquez sur une station directement sur la carte ou sélectionnez un véhicule pour ne voir que son parcours.</p>
+      <div class="filters-grid" style="margin-top: 12px;">
+        <div class="control">
+          <label for="stationSelect">Station (arrivée ou départ)</label>
+          <select id="stationSelect"></select>
+        </div>
+        <div class="control">
+          <label for="startHour">Heure de début</label>
+          <input id="startHour" type="number" min="0" max="23" value="0" />
+        </div>
+        <div class="control">
+          <label for="endHour">Heure de fin</label>
+          <input id="endHour" type="number" min="0" max="23" value="23" />
+        </div>
+        <div class="control">
+          <label>&nbsp;</label>
+          <button id="resetFilters" type="button" class="pill-button">Réinitialiser les filtres</button>
+        </div>
+      </div>
+      <div id="tripSummary" class="muted-text" style="margin-top: 10px;"></div>
+      <div id="routeMap"></div>
+      <div style="margin-top: 12px;">
+        <strong>Véhicules</strong>
+        <div id="vehiclesList" class="vehicle-list"></div>
+      </div>
     </div>
 
     <div class="card" style="margin-top: 20px;">
@@ -303,6 +357,20 @@
 
     let mapInstance = null;
     let mapLayerGroup = null;
+    let routeMap = null;
+    let routeLayerGroup = null;
+    let stationLookup = new Map();
+
+    const uiState = {
+      events: [],
+      stations: [],
+      trips: [],
+      filteredTrips: [],
+      selectedStation: 'all',
+      hourStart: 0,
+      hourEnd: 23,
+      selectedVehicle: null,
+    };
 
     function renderMap(stations) {
       const withCoords = stations.filter((s) => s.lat && s.lon);
@@ -345,6 +413,185 @@
       }
     }
 
+    function buildTrips(events, toleranceHours = 12) {
+      const byVehicle = new Map();
+      const trips = [];
+      const maxDelta = toleranceHours * 60 * 60 * 1000;
+      for (const evt of events) {
+        if (!evt?.ts) continue;
+        if (evt.type === 'OUT') {
+          byVehicle.set(evt.v, evt);
+        } else if (evt.type === 'IN') {
+          const prev = byVehicle.get(evt.v);
+          if (prev && evt.ts - prev.ts <= maxDelta) {
+            trips.push({
+              vehicle: evt.v,
+              startTs: prev.ts,
+              endTs: evt.ts,
+              startStationId: prev.station_id ?? prev.station ?? 'unknown',
+              endStationId: evt.station_id ?? evt.station ?? 'unknown',
+              startName: prev.station_name || prev.station || 'Station inconnue',
+              endName: evt.station_name || evt.station || 'Station inconnue',
+              startLat: prev.lat,
+              startLon: prev.lon,
+              endLat: evt.lat,
+              endLon: evt.lon,
+              durationMin: (evt.ts - prev.ts) / 60000,
+            });
+          }
+          byVehicle.delete(evt.v);
+        }
+      }
+      return trips;
+    }
+
+    function populateStationSelect(stations) {
+      const select = document.getElementById('stationSelect');
+      select.innerHTML = '';
+      const allOption = document.createElement('option');
+      allOption.value = 'all';
+      allOption.textContent = 'Toutes les stations';
+      select.appendChild(allOption);
+      stations
+        .filter((s) => s.station_id !== undefined)
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+        .forEach((station) => {
+          const opt = document.createElement('option');
+          opt.value = String(station.station_id);
+          opt.textContent = station.name || station.station_id;
+          select.appendChild(opt);
+        });
+      select.value = uiState.selectedStation || 'all';
+    }
+
+    function formatHourRange(start, end) {
+      return `${String(start).padStart(2, '0')}h-${String(end).padStart(2, '0')}h`;
+    }
+
+    function filterTrips() {
+      const { selectedStation, hourStart, hourEnd, selectedVehicle } = uiState;
+      const normalizedStart = Math.max(0, Math.min(23, Number(hourStart)));
+      const normalizedEnd = Math.max(0, Math.min(23, Number(hourEnd)));
+      const inRange = (date) => {
+        const h = date.getHours();
+        if (normalizedStart <= normalizedEnd) return h >= normalizedStart && h <= normalizedEnd;
+        return h >= normalizedStart || h <= normalizedEnd;
+      };
+      const filtered = uiState.trips.filter((trip) => {
+        const stationMatch =
+          selectedStation === 'all' ||
+          String(trip.startStationId) === String(selectedStation) ||
+          String(trip.endStationId) === String(selectedStation);
+        const hourMatch = inRange(trip.startTs) || inRange(trip.endTs);
+        const vehicleMatch = !selectedVehicle || trip.vehicle === selectedVehicle;
+        return stationMatch && hourMatch && vehicleMatch;
+      });
+      uiState.filteredTrips = filtered;
+      renderTripSummary();
+      renderVehicleList();
+      renderRouteMap();
+    }
+
+    function renderTripSummary() {
+      const summary = document.getElementById('tripSummary');
+      if (!uiState.trips.length) {
+        summary.textContent = 'Aucun trajet reconstitué pour les données chargées.';
+        return;
+      }
+      const vehicles = new Set(uiState.filteredTrips.map((t) => t.vehicle)).size;
+      summary.textContent = `${uiState.filteredTrips.length} trajets – ${vehicles} véhicule(s) – plage ${formatHourRange(uiState.hourStart, uiState.hourEnd)}.`;
+    }
+
+    function renderVehicleList() {
+      const container = document.getElementById('vehiclesList');
+      container.innerHTML = '';
+      const vehicles = Array.from(new Set(uiState.trips.map((t) => t.vehicle))).sort();
+      const filteredVehicles = new Set(uiState.filteredTrips.map((t) => t.vehicle));
+      vehicles.forEach((vehicle) => {
+        const count = uiState.filteredTrips.filter((t) => t.vehicle === vehicle).length;
+        const button = document.createElement('div');
+        button.className = `vehicle-item${uiState.selectedVehicle === vehicle ? ' active' : ''}`;
+        button.textContent = count ? `${vehicle} (${count})` : `${vehicle} (hors filtre)`;
+        button.style.opacity = filteredVehicles.has(vehicle) ? '1' : '0.5';
+        button.addEventListener('click', () => {
+          uiState.selectedVehicle = uiState.selectedVehicle === vehicle ? null : vehicle;
+          filterTrips();
+        });
+        container.appendChild(button);
+      });
+      if (!vehicles.length) {
+        container.innerHTML = '<span class="muted-text">Aucun véhicule détecté.</span>';
+      }
+    }
+
+    function ensureRouteMap() {
+      if (!routeMap) {
+        routeMap = L.map('routeMap');
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
+          attribution: '&copy; OpenStreetMap, © Carto',
+          maxZoom: 18,
+        }).addTo(routeMap);
+        routeLayerGroup = L.layerGroup().addTo(routeMap);
+      }
+    }
+
+    function renderRouteMap() {
+      ensureRouteMap();
+      routeLayerGroup.clearLayers();
+      if (!uiState.filteredTrips.length) {
+        routeMap.setView([45.1885, 5.7245], 12);
+        return;
+      }
+
+      const bounds = [];
+      const addStationMarker = (id, name, lat, lon) => {
+        if (!lat || !lon) return;
+        if (stationLookup.has(id)) return;
+        const marker = L.circleMarker([lat, lon], {
+          radius: 7,
+          color: '#22d3ee',
+          weight: String(uiState.selectedStation) === String(id) ? 3 : 1.5,
+          fillColor: '#0ea5e9',
+          fillOpacity: 0.7,
+        }).bindPopup(`<strong>${name || 'Station'}</strong><br/><span class="badge">Cliquer pour filtrer</span>`);
+        marker.on('click', () => {
+          uiState.selectedStation = String(id);
+          document.getElementById('stationSelect').value = String(id);
+          filterTrips();
+        });
+        marker.addTo(routeLayerGroup);
+        bounds.push([lat, lon]);
+        stationLookup.set(id, marker);
+      };
+
+      stationLookup = new Map();
+      uiState.filteredTrips.forEach((trip) => {
+        addStationMarker(trip.startStationId, trip.startName, trip.startLat, trip.startLon);
+        addStationMarker(trip.endStationId, trip.endName, trip.endLat, trip.endLon);
+        if (trip.startLat && trip.startLon && trip.endLat && trip.endLon) {
+          const line = L.polyline(
+            [
+              [trip.startLat, trip.startLon],
+              [trip.endLat, trip.endLon],
+            ],
+            {
+              color: uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle ? '#f59e0b' : '#3b82f6',
+              weight: uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle ? 5 : 3,
+              opacity: 0.8,
+            }
+          ).bindPopup(
+            `<div><strong>Véhicule ${trip.vehicle}</strong><br/>${trip.startName} → ${trip.endName}<br/>Durée : ${trip.durationMin.toFixed(1)} min</div>`
+          );
+          line.addTo(routeLayerGroup);
+          bounds.push([trip.startLat, trip.startLon], [trip.endLat, trip.endLon]);
+        }
+      });
+
+      if (bounds.length) {
+        routeMap.fitBounds(bounds, { padding: [20, 20] });
+      }
+    }
+
     async function parseCsv(text) {
       const parseCoordinate = (value) => {
         if (value === undefined || value === null || value === '') return null;
@@ -378,11 +625,16 @@
       const stationContent = stationFile ? await readFileText(stationFile) : null;
       const stations = stationContent ? await parseCsv(stationContent) : [];
       const enriched = attachStations(filtered, stations);
+      uiState.events = enriched;
+      uiState.stations = stations;
+      uiState.trips = buildTrips(enriched);
       updateSummary(enriched);
       renderDailyChart(groupDaily(enriched));
       const stationAggregates = aggregateStations(enriched);
       renderStationChart(topStations(enriched));
       renderMap(stationAggregates);
+      populateStationSelect(stationAggregates);
+      filterTrips();
     }
 
     async function loadDemo() {
@@ -397,11 +649,16 @@
         const filtered = filterEvents(rawEvents);
         const stations = await parseCsv(stationsText);
         const enriched = attachStations(filtered, stations);
+        uiState.events = enriched;
+        uiState.stations = stations;
+        uiState.trips = buildTrips(enriched);
         updateSummary(enriched);
         renderDailyChart(groupDaily(enriched));
         const stationAggregates = aggregateStations(enriched);
         renderStationChart(topStations(enriched));
         renderMap(stationAggregates);
+        populateStationSelect(stationAggregates);
+        filterTrips();
       } catch (err) {
         console.error(err);
         alert('Impossible de charger les fichiers de démonstration.');
@@ -409,6 +666,28 @@
     }
 
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
+    document.getElementById('stationSelect').addEventListener('change', (event) => {
+      uiState.selectedStation = event.target.value;
+      filterTrips();
+    });
+    document.getElementById('startHour').addEventListener('change', (event) => {
+      uiState.hourStart = Number(event.target.value);
+      filterTrips();
+    });
+    document.getElementById('endHour').addEventListener('change', (event) => {
+      uiState.hourEnd = Number(event.target.value);
+      filterTrips();
+    });
+    document.getElementById('resetFilters').addEventListener('click', () => {
+      uiState.selectedStation = 'all';
+      uiState.selectedVehicle = null;
+      uiState.hourStart = 0;
+      uiState.hourEnd = 23;
+      document.getElementById('stationSelect').value = 'all';
+      document.getElementById('startHour').value = 0;
+      document.getElementById('endHour').value = 23;
+      filterTrips();
+    });
     loadDemo();
   </script>
 </body>
