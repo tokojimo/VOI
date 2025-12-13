@@ -9,6 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-o9N1j7kPjJgLcMbGg3xFjNJ8h2bM3pX5J9g2f2G4E0c="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-o9N1j7kPjJgLcMbGg3xFjNJ8h2bM3pX5J9g2f2G4E0c="
+    crossorigin=""
+  ></script>
   <style>
     :root {
       --bg: #0f172a;
@@ -85,6 +96,7 @@
     .metric strong { display: block; font-size: 22px; }
     #charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
     .plot { min-height: 320px; }
+    #map { height: 420px; border-radius: 12px; overflow: hidden; }
     .footer { margin-top: 32px; color: var(--muted); font-size: 14px; }
     a { color: #22d3ee; }
   </style>
@@ -95,24 +107,19 @@
       <h1>VOI – Tableau de bord statique</h1>
       <span class="pill">Client-side only</span>
     </div>
-    <p>Analyse rapide des flux VOI directement dans le navigateur, sans backend Streamlit. Chargez vos exports NDJSON/CSV ou utilisez l'exemple inclus.</p>
+    <p>Analyse rapide des flux VOI directement dans le navigateur, sans backend Streamlit. Les exports fournis dans le dépôt sont chargés automatiquement pour illustrer les visualisations.</p>
   </header>
   <div class="container">
     <div class="grid">
       <div class="card">
-        <h2>1) Charger vos données</h2>
-        <label for="ndjsonInput">Événements (.ndjson)</label>
-        <input id="ndjsonInput" type="file" accept=".ndjson,.jsonl" multiple />
-        <label for="stationsInput" style="margin-top: 12px;">Stations (.csv)</label>
-        <input id="stationsInput" type="file" accept=".csv" />
+        <h2>Données de démonstration</h2>
+        <p class="muted">Les exports NDJSON/CSV sont préchargés depuis le dépôt GitHub pour simplifier l'exploration.</p>
         <div style="margin-top: 12px; display: flex; gap: 8px;">
-          <button id="loadBtn">Traiter les fichiers</button>
-          <button id="demoBtn" type="button">Charger l'exemple</button>
+          <button id="demoBtn" type="button">Recharger les données</button>
         </div>
-        <p class="muted" style="margin-top: 8px;">Vos fichiers restent dans le navigateur (aucun upload côté serveur).</p>
       </div>
       <div class="card">
-        <h2>2) Résumé</h2>
+        <h2>Résumé</h2>
         <div class="metrics">
           <div class="metric"><span class="muted">Événements</span><strong id="eventsCount">–</strong></div>
           <div class="metric"><span class="muted">Trottinettes</span><strong id="vehiclesCount">–</strong></div>
@@ -127,7 +134,12 @@
     </div>
 
     <div class="card" style="margin-top: 20px;">
-      <h2>3) Détails</h2>
+      <h2>Carte des stations</h2>
+      <div id="map"></div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <h2>Détails</h2>
       <p class="muted">Exportez vos visualisations via le menu contextuel de Plotly. Les traitements reproduisent les étapes essentielles du code Streamlit : filtrage IN/OUT, tri chronologique et association des métadonnées stations.</p>
     </div>
 
@@ -178,9 +190,14 @@
         .filter(Boolean);
     }
 
+    function normalizeType(type) {
+      const normalized = (type || '').toString().toUpperCase();
+      return normalized === 'INIT' ? 'IN' : normalized;
+    }
+
     function filterEvents(rows) {
       return rows
-        .map((row) => ({ ...row, ts: parseTimestamp(row) }))
+        .map((row) => ({ ...row, type: normalizeType(row.type), ts: parseTimestamp(row) }))
         .filter((row) => row.ts && (row.type === 'IN' || row.type === 'OUT'))
         .sort((a, b) => a.ts - b.ts);
     }
@@ -197,6 +214,26 @@
           lon: meta.lon,
         };
       });
+    }
+
+    function aggregateStations(events) {
+      const map = new Map();
+      for (const e of events) {
+        const key = e.station_id || e.station || 'unknown';
+        const entry = map.get(key) || {
+          station_id: key,
+          name: e.station_name || String(key),
+          IN: 0,
+          OUT: 0,
+          lat: e.lat,
+          lon: e.lon,
+        };
+        entry[e.type] = (entry[e.type] || 0) + 1;
+        entry.lat = entry.lat ?? e.lat;
+        entry.lon = entry.lon ?? e.lon;
+        map.set(key, entry);
+      }
+      return Array.from(map.values());
     }
 
     function groupDaily(events) {
@@ -264,6 +301,50 @@
       }, { responsive: true, displaylogo: false });
     }
 
+    let mapInstance = null;
+    let mapLayerGroup = null;
+
+    function renderMap(stations) {
+      const withCoords = stations.filter((s) => s.lat && s.lon);
+      if (!withCoords.length) {
+        if (mapInstance) {
+          mapInstance.remove();
+          mapInstance = null;
+        }
+        return;
+      }
+
+      if (!mapInstance) {
+        mapInstance = L.map('map');
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; OpenStreetMap contributors',
+          maxZoom: 19,
+        }).addTo(mapInstance);
+        mapLayerGroup = L.layerGroup().addTo(mapInstance);
+      }
+
+      mapLayerGroup.clearLayers();
+      const bounds = [];
+
+      for (const station of withCoords) {
+        const total = (station.IN || 0) + (station.OUT || 0);
+        const popup = `<strong>${station.name || 'Station inconnue'}</strong><br/>IN: ${station.IN || 0}<br/>OUT: ${station.OUT || 0}<br/>Total: ${total}`;
+        const marker = L.circleMarker([station.lat, station.lon], {
+          radius: Math.max(6, Math.min(14, total / 10)),
+          color: '#22d3ee',
+          weight: 2,
+          fillColor: '#3b82f6',
+          fillOpacity: 0.6,
+        }).bindPopup(popup);
+        marker.addTo(mapLayerGroup);
+        bounds.push([station.lat, station.lon]);
+      }
+
+      if (bounds.length) {
+        mapInstance.fitBounds(bounds, { padding: [20, 20] });
+      }
+    }
+
     async function parseCsv(text) {
       return new Promise((resolve, reject) => {
         Papa.parse(text, {
@@ -284,7 +365,9 @@
       const enriched = attachStations(filtered, stations);
       updateSummary(enriched);
       renderDailyChart(groupDaily(enriched));
+      const stationAggregates = aggregateStations(enriched);
       renderStationChart(topStations(enriched));
+      renderMap(stationAggregates);
     }
 
     async function loadDemo() {
@@ -301,19 +384,14 @@
         const enriched = attachStations(filtered, stations);
         updateSummary(enriched);
         renderDailyChart(groupDaily(enriched));
+        const stationAggregates = aggregateStations(enriched);
         renderStationChart(topStations(enriched));
+        renderMap(stationAggregates);
       } catch (err) {
         console.error(err);
         alert('Impossible de charger les fichiers de démonstration.');
       }
     }
-
-    document.getElementById('loadBtn').addEventListener('click', async () => {
-      const ndjsonFiles = Array.from(document.getElementById('ndjsonInput').files || []);
-      if (!ndjsonFiles.length) { alert('Ajoutez au moins un fichier NDJSON.'); return; }
-      const stationFile = document.getElementById('stationsInput').files?.[0];
-      await handleFiles(ndjsonFiles, stationFile);
-    });
 
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
     loadDemo();
