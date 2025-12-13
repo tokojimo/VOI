@@ -601,16 +601,29 @@
         return Number.isFinite(parsed) ? parsed : null;
       };
 
+      const normalizeRow = (row) => {
+        const cleaned = {};
+        for (const [key, value] of Object.entries(row)) {
+          const normalizedKey = key.replace(/^\ufeff/, '').trim();
+          cleaned[normalizedKey] = value;
+        }
+        return cleaned;
+      };
+
       return new Promise((resolve, reject) => {
         Papa.parse(text, {
           header: true,
           skipEmptyLines: true,
           complete: (results) => {
-            const normalized = results.data.map((row) => ({
-              ...row,
-              lat: parseCoordinate(row.lat),
-              lon: parseCoordinate(row.lon),
-            }));
+            const normalized = results.data.map((rawRow) => {
+              const row = normalizeRow(rawRow);
+              return {
+                ...row,
+                station_id: row.station_id ?? row.id ?? row.station ?? row['station id'],
+                lat: parseCoordinate(row.lat),
+                lon: parseCoordinate(row.lon),
+              };
+            });
             resolve(normalized);
           },
           error: reject,
