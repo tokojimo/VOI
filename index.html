@@ -9,6 +9,13 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!--
+    Hachage SRI officiel de Leaflet 1.9.4 (source : https://unpkg.com/leaflet@1.9.4/dist/).
+    Pour le vérifier ou le régénérer lors d'une mise à jour, télécharger le fichier puis exécuter :
+      openssl dgst -sha256 -binary leaflet.js | openssl base64 -A
+    La carte fonctionne sans l'attribut "integrity", mais le conserver garantit que le fichier chargé
+    n'a pas été altéré sur le CDN.
+  -->
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -17,7 +24,7 @@
   />
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-o9N1j7kPjJgLcMbGg3xFjNJ8h2bM3pX5J9g2f2G4E0c="
+    integrity="sha256-o9N1j7kPjJgLcMbGg3xFjNJ8h2bM3pX5J9g2f2G4E0="
     crossorigin=""
   ></script>
   <style>
