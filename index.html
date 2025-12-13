@@ -64,7 +64,7 @@
     h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; }
     h2 { margin-top: 24px; margin-bottom: 12px; letter-spacing: -0.01em; }
     p { margin: 8px 0 0; color: var(--muted); }
-    .container { padding: 16px 32px 32px; max-width: 1200px; margin: 0 auto; }
+    .container { padding: 16px 32px 32px; max-width: 1280px; margin: 0 auto; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -75,7 +75,7 @@
       background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 16px;
+      padding: 16px 18px;
       box-shadow: var(--shadow);
     }
     label { font-weight: 600; display: block; margin-bottom: 6px; }
@@ -117,8 +117,7 @@
     .metric strong { display: block; font-size: 22px; letter-spacing: -0.01em; }
     #charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
     .plot { min-height: 320px; }
-    #map { height: 420px; border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
-    #routeMap { height: 460px; border-radius: 14px; overflow: hidden; margin-top: 12px; box-shadow: var(--shadow); }
+    #map { height: 520px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
     .footer { margin-top: 32px; color: var(--muted); font-size: 14px; }
     a { color: #22d3ee; }
     .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
@@ -145,6 +144,14 @@
     .vehicle-item.active { border-color: #0a84ff; box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.35); }
     .muted-text { color: var(--muted); font-size: 14px; }
     .badge { background: rgba(10, 132, 255, 0.15); color: var(--text); padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(10, 132, 255, 0.4); font-size: 12px; }
+    .map-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 960px) { .map-grid { grid-template-columns: 1fr; } #map { height: 420px; } }
+    .panel { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+    .panel h3 { margin: 0 0 8px; font-size: 16px; }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+    .chip { padding: 8px 10px; background: rgba(15, 23, 42, 0.04); border: 1px solid var(--border); border-radius: 12px; font-weight: 600; }
+    .map-legend { display: flex; gap: 10px; align-items: center; margin-top: 10px; color: var(--muted); font-size: 13px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
   </style>
 </head>
 <body>
@@ -180,37 +187,48 @@
     </div>
 
     <div class="card" style="margin-top: 20px;">
-      <h2>Carte des stations</h2>
-      <div id="map"></div>
-      <div id="mapStatus" class="muted-text" style="margin-top: 8px;"></div>
-    </div>
-
-    <div class="card" style="margin-top: 20px;">
-      <h2>Explorateur de trajets</h2>
-      <p class="muted">Choisissez une station et une plage horaire pour afficher les trajets reconstruits. Cliquez sur une station directement sur la carte ou sélectionnez un véhicule pour ne voir que son parcours.</p>
-      <div class="filters-grid" style="margin-top: 12px;">
-        <div class="control">
-          <label for="stationSelect">Station (arrivée ou départ)</label>
-          <select id="stationSelect"></select>
+      <h2>Carte & explorateur de trajets</h2>
+      <p class="muted">Une seule carte rassemble les stations et les trajets reconstitués. Cliquez sur une station pour révéler ses flux IN/OUT, filtrer automatiquement les trajets associés et survoler les lignes pour voir les détails.</p>
+      <div class="map-grid" style="margin-top: 12px;">
+        <div>
+          <div id="map"></div>
+          <div class="map-legend">
+            <span><span class="legend-dot" style="background:#0a84ff;"></span>Stations</span>
+            <span><span class="legend-dot" style="background:#34c759;"></span>Lignes de trajets filtrés</span>
+            <span id="mapStatus" class="muted-text"></span>
+          </div>
         </div>
-        <div class="control">
-          <label for="startHour">Heure de début</label>
-          <input id="startHour" type="number" min="0" max="23" value="0" />
+        <div class="panel">
+          <h3>Navigation rapide</h3>
+          <div class="filters-grid">
+            <div class="control">
+              <label for="stationSelect">Station (arrivée ou départ)</label>
+              <select id="stationSelect"></select>
+            </div>
+            <div class="control">
+              <label for="startHour">Heure de début</label>
+              <input id="startHour" type="number" min="0" max="23" value="0" />
+            </div>
+            <div class="control">
+              <label for="endHour">Heure de fin</label>
+              <input id="endHour" type="number" min="0" max="23" value="23" />
+            </div>
+            <div class="control">
+              <label>&nbsp;</label>
+              <button id="resetFilters" type="button" class="pill-button">Réinitialiser les filtres</button>
+            </div>
+          </div>
+          <div class="panel" style="margin-top: 12px;">
+            <h3>Station sélectionnée</h3>
+            <div id="stationDetails" class="muted-text">Cliquez sur une station ou choisissez-la dans la liste pour voir ses flux.</div>
+          </div>
+          <div class="panel" style="margin-top: 12px;">
+            <h3>Trajets filtrés</h3>
+            <div id="tripSummary" class="muted-text"></div>
+            <div style="margin-top: 10px;"><strong>Véhicules</strong></div>
+            <div id="vehiclesList" class="vehicle-list"></div>
+          </div>
         </div>
-        <div class="control">
-          <label for="endHour">Heure de fin</label>
-          <input id="endHour" type="number" min="0" max="23" value="23" />
-        </div>
-        <div class="control">
-          <label>&nbsp;</label>
-          <button id="resetFilters" type="button" class="pill-button">Réinitialiser les filtres</button>
-        </div>
-      </div>
-      <div id="tripSummary" class="muted-text" style="margin-top: 10px;"></div>
-      <div id="routeMap"></div>
-      <div style="margin-top: 12px;">
-        <strong>Véhicules</strong>
-        <div id="vehiclesList" class="vehicle-list"></div>
       </div>
     </div>
 
@@ -378,66 +396,135 @@
     }
 
     let mapInstance = null;
-    let mapLayerGroup = null;
-    let routeMap = null;
-    let routeLayerGroup = null;
-    let stationLookup = new Map();
+    let stationLayerGroup = null;
+    let tripLayerGroup = null;
 
     const uiState = {
       events: [],
       stations: [],
       trips: [],
       filteredTrips: [],
+      stationAggregates: [],
       selectedStation: 'all',
       hourStart: 0,
       hourEnd: 23,
       selectedVehicle: null,
     };
 
-    function renderMap(stations) {
-      const withCoords = stations.filter((s) => s.lat && s.lon);
-      const status = document.getElementById('mapStatus');
-
+    function ensureMap() {
       if (!mapInstance) {
         mapInstance = L.map('map').setView([45.1885, 5.7245], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 19,
         }).addTo(mapInstance);
-        mapLayerGroup = L.layerGroup().addTo(mapInstance);
+        stationLayerGroup = L.layerGroup().addTo(mapInstance);
+        tripLayerGroup = L.layerGroup().addTo(mapInstance);
       }
+    }
 
-      mapLayerGroup.clearLayers();
-
-      if (!withCoords.length) {
-        mapInstance.setView([45.1885, 5.7245], 13);
-        if (status) {
-          status.textContent = 'Aucune station géolocalisée dans les données chargées.';
-        }
+    function updateStationDetails() {
+      const panel = document.getElementById('stationDetails');
+      if (!panel) return;
+      if (uiState.selectedStation === 'all') {
+        panel.textContent = 'Cliquez sur une station ou choisissez-la dans la liste pour voir ses flux.';
         return;
       }
+      const station = uiState.stationAggregates.find((s) => String(s.station_id) === String(uiState.selectedStation));
+      if (!station) {
+        panel.textContent = 'Station non trouvée dans les données chargées.';
+        return;
+      }
+      const relatedTrips = uiState.filteredTrips.filter(
+        (t) => String(t.startStationId) === String(station.station_id) || String(t.endStationId) === String(station.station_id)
+      );
+      panel.innerHTML = `
+        <div style="font-weight: 700; margin-bottom: 4px;">${station.name || 'Station inconnue'}</div>
+        <div class="chip-row" style="margin-bottom: 8px;">
+          <span class="chip">IN : ${station.IN || 0}</span>
+          <span class="chip">OUT : ${station.OUT || 0}</span>
+          <span class="chip">Total : ${(station.IN || 0) + (station.OUT || 0)}</span>
+        </div>
+        <div class="muted-text">Trajets filtrés liés : ${relatedTrips.length}</div>
+        <div class="muted-text">Coordonnées : ${station.lat && station.lon ? `${station.lat.toFixed(5)}, ${station.lon.toFixed(5)}` : 'non renseignées'}</div>
+      `;
+    }
 
+    function renderStationsOnMap(stations) {
+      ensureMap();
+      stationLayerGroup.clearLayers();
+      const withCoords = stations.filter((s) => s.lat && s.lon);
       const bounds = [];
+      const status = document.getElementById('mapStatus');
+      if (!withCoords.length) {
+        mapInstance.setView([45.1885, 5.7245], 13);
+        if (status) status.textContent = 'Aucune station géolocalisée dans les données chargées.';
+        return [];
+      }
 
       for (const station of withCoords) {
         const total = (station.IN || 0) + (station.OUT || 0);
-        const popup = `<strong>${station.name || 'Station inconnue'}</strong><br/>IN: ${station.IN || 0}<br/>OUT: ${station.OUT || 0}<br/>Total: ${total}`;
+        const isActive = String(uiState.selectedStation) === String(station.station_id);
         const marker = L.circleMarker([station.lat, station.lon], {
-          radius: Math.max(6, Math.min(14, total / 10)),
-          color: '#0a84ff',
-          weight: 2,
+          radius: Math.max(7, Math.min(16, total / 8)),
+          color: isActive ? '#ff9f0a' : '#0a84ff',
+          weight: isActive ? 3 : 1.5,
           fillColor: '#34c759',
-          fillOpacity: 0.7,
-        }).bindPopup(popup);
-        marker.addTo(mapLayerGroup);
+          fillOpacity: 0.75,
+        }).bindPopup(
+          `<strong>${station.name || 'Station inconnue'}</strong><br/>IN: ${station.IN || 0}<br/>OUT: ${station.OUT || 0}<br/>Total: ${total}`
+        );
+        marker.on('click', () => {
+          uiState.selectedStation = String(station.station_id);
+          document.getElementById('stationSelect').value = String(station.station_id);
+          updateStationDetails();
+          filterTrips();
+          mapInstance.flyTo([station.lat, station.lon], Math.max(mapInstance.getZoom(), 14));
+        });
+        marker.addTo(stationLayerGroup);
         bounds.push([station.lat, station.lon]);
       }
 
-      if (bounds.length) {
-        mapInstance.fitBounds(bounds, { padding: [20, 20] });
-        if (status) {
-          status.textContent = `${withCoords.length} station(s) géolocalisée(s) affichée(s) sur Grenoble.`;
+      if (status) {
+        status.textContent = `${withCoords.length} station(s) géolocalisée(s) – cliquez pour filtrer.`;
+      }
+      return bounds;
+    }
+
+    function renderTripsOnMap() {
+      ensureMap();
+      tripLayerGroup.clearLayers();
+      const bounds = [];
+      uiState.filteredTrips.forEach((trip) => {
+        if (trip.startLat && trip.startLon && trip.endLat && trip.endLon) {
+          const isFocusedVehicle = uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle;
+          const line = L.polyline(
+            [
+              [trip.startLat, trip.startLon],
+              [trip.endLat, trip.endLon],
+            ],
+            {
+              color: isFocusedVehicle ? '#ff9f0a' : '#0a84ff',
+              weight: isFocusedVehicle ? 5 : 3.2,
+              opacity: 0.9,
+            }
+          ).bindPopup(
+            `<div><strong>Véhicule ${trip.vehicle}</strong><br/>${trip.startName} → ${trip.endName}<br/>Durée : ${trip.durationMin.toFixed(1)} min</div>`
+          );
+          line.addTo(tripLayerGroup);
+          bounds.push([trip.startLat, trip.startLon], [trip.endLat, trip.endLon]);
         }
+      });
+      return bounds;
+    }
+
+    function renderMap(stations) {
+      uiState.stationAggregates = stations;
+      const stationBounds = renderStationsOnMap(stations);
+      const tripBounds = renderTripsOnMap();
+      const combinedBounds = [...stationBounds, ...tripBounds];
+      if (combinedBounds.length) {
+        mapInstance.fitBounds(combinedBounds, { padding: [18, 18] });
       }
     }
 
@@ -515,9 +602,15 @@
         return stationMatch && hourMatch && vehicleMatch;
       });
       uiState.filteredTrips = filtered;
+      updateStationDetails();
       renderTripSummary();
       renderVehicleList();
-      renderRouteMap();
+      const stationBounds = renderStationsOnMap(uiState.stationAggregates);
+      const tripBounds = renderTripsOnMap();
+      const combinedBounds = [...stationBounds, ...tripBounds];
+      if (combinedBounds.length) {
+        mapInstance.fitBounds(combinedBounds, { padding: [18, 18] });
+      }
     }
 
     function renderTripSummary() {
@@ -552,73 +645,6 @@
       }
     }
 
-    function ensureRouteMap() {
-      if (!routeMap) {
-        routeMap = L.map('routeMap');
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png', {
-          attribution: '&copy; OpenStreetMap, © Carto',
-          maxZoom: 18,
-        }).addTo(routeMap);
-        routeLayerGroup = L.layerGroup().addTo(routeMap);
-      }
-    }
-
-    function renderRouteMap() {
-      ensureRouteMap();
-      routeLayerGroup.clearLayers();
-      if (!uiState.filteredTrips.length) {
-        routeMap.setView([45.1885, 5.7245], 12);
-        return;
-      }
-
-      const bounds = [];
-        const addStationMarker = (id, name, lat, lon) => {
-          if (!lat || !lon) return;
-          if (stationLookup.has(id)) return;
-          const marker = L.circleMarker([lat, lon], {
-            radius: 7,
-            color: '#0a84ff',
-            weight: String(uiState.selectedStation) === String(id) ? 3 : 1.5,
-            fillColor: '#34c759',
-            fillOpacity: 0.7,
-          }).bindPopup(`<strong>${name || 'Station'}</strong><br/><span class="badge">Cliquer pour filtrer</span>`);
-        marker.on('click', () => {
-          uiState.selectedStation = String(id);
-          document.getElementById('stationSelect').value = String(id);
-          filterTrips();
-        });
-        marker.addTo(routeLayerGroup);
-        bounds.push([lat, lon]);
-        stationLookup.set(id, marker);
-      };
-
-      stationLookup = new Map();
-      uiState.filteredTrips.forEach((trip) => {
-        addStationMarker(trip.startStationId, trip.startName, trip.startLat, trip.startLon);
-        addStationMarker(trip.endStationId, trip.endName, trip.endLat, trip.endLon);
-        if (trip.startLat && trip.startLon && trip.endLat && trip.endLon) {
-          const line = L.polyline(
-            [
-              [trip.startLat, trip.startLon],
-              [trip.endLat, trip.endLon],
-            ],
-            {
-              color: uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle ? '#ff9f0a' : '#0a84ff',
-              weight: uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle ? 5 : 3.5,
-              opacity: 0.8,
-            }
-          ).bindPopup(
-            `<div><strong>Véhicule ${trip.vehicle}</strong><br/>${trip.startName} → ${trip.endName}<br/>Durée : ${trip.durationMin.toFixed(1)} min</div>`
-          );
-          line.addTo(routeLayerGroup);
-          bounds.push([trip.startLat, trip.startLon], [trip.endLat, trip.endLon]);
-        }
-      });
-
-      if (bounds.length) {
-        routeMap.fitBounds(bounds, { padding: [20, 20] });
-      }
-    }
 
     async function parseCsv(text) {
       const parseCoordinate = (value) => {
