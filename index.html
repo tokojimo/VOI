@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analyse VOI - version statique</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --accent: #22d3ee;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      line-height: 1.5;
+    }
+    header {
+      padding: 24px 32px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    h1 { margin: 0 0 8px; font-size: 28px; }
+    h2 { margin-top: 24px; margin-bottom: 12px; }
+    p { margin: 8px 0 0; color: var(--muted); }
+    .container { padding: 16px 32px 32px; }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    }
+    label { font-weight: 600; display: block; margin-bottom: 6px; }
+    input[type="file"] {
+      width: 100%;
+      background: #0b1220;
+      border: 1px dashed var(--border);
+      color: var(--muted);
+      padding: 10px;
+      border-radius: 8px;
+    }
+    button {
+      background: linear-gradient(120deg, #22d3ee, #3b82f6);
+      color: #0b1220;
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s ease, filter 0.2s ease;
+    }
+    button:hover { filter: brightness(1.05); }
+    button:active { transform: translateY(1px); }
+    .inline { display: inline-flex; align-items: center; gap: 8px; }
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(34, 211, 238, 0.12);
+      color: var(--text);
+      border: 1px solid rgba(34, 211, 238, 0.3);
+      font-size: 13px;
+      margin-right: 6px;
+    }
+    .muted { color: var(--muted); }
+    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 10px; }
+    .metric { padding: 12px; background: #0b1220; border: 1px solid var(--border); border-radius: 10px; }
+    .metric strong { display: block; font-size: 22px; }
+    #charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .plot { min-height: 320px; }
+    .footer { margin-top: 32px; color: var(--muted); font-size: 14px; }
+    a { color: #22d3ee; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="inline">
+      <h1>VOI – Tableau de bord statique</h1>
+      <span class="pill">Client-side only</span>
+    </div>
+    <p>Analyse rapide des flux VOI directement dans le navigateur, sans backend Streamlit. Chargez vos exports NDJSON/CSV ou utilisez l'exemple inclus.</p>
+  </header>
+  <div class="container">
+    <div class="grid">
+      <div class="card">
+        <h2>1) Charger vos données</h2>
+        <label for="ndjsonInput">Événements (.ndjson)</label>
+        <input id="ndjsonInput" type="file" accept=".ndjson,.jsonl" multiple />
+        <label for="stationsInput" style="margin-top: 12px;">Stations (.csv)</label>
+        <input id="stationsInput" type="file" accept=".csv" />
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+          <button id="loadBtn">Traiter les fichiers</button>
+          <button id="demoBtn" type="button">Charger l'exemple</button>
+        </div>
+        <p class="muted" style="margin-top: 8px;">Vos fichiers restent dans le navigateur (aucun upload côté serveur).</p>
+      </div>
+      <div class="card">
+        <h2>2) Résumé</h2>
+        <div class="metrics">
+          <div class="metric"><span class="muted">Événements</span><strong id="eventsCount">–</strong></div>
+          <div class="metric"><span class="muted">Trottinettes</span><strong id="vehiclesCount">–</strong></div>
+          <div class="metric"><span class="muted">Période couverte</span><strong id="dateRange">–</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="charts" style="margin-top: 20px;">
+      <div class="card"><h2>Flux quotidiens</h2><div id="dailyChart" class="plot"></div></div>
+      <div class="card"><h2>Stations les plus actives</h2><div id="stationChart" class="plot"></div></div>
+    </div>
+
+    <div class="card" style="margin-top: 20px;">
+      <h2>3) Détails</h2>
+      <p class="muted">Exportez vos visualisations via le menu contextuel de Plotly. Les traitements reproduisent les étapes essentielles du code Streamlit : filtrage IN/OUT, tri chronologique et association des métadonnées stations.</p>
+    </div>
+
+    <div class="footer">Source : <a href="https://github.com/tokojimo/VOI" target="_blank" rel="noopener">tokojimo/VOI</a>. Cette page fonctionne sur GitHub Pages ou tout serveur statique.</div>
+  </div>
+
+  <script>
+    const parisOffsetMinutes = new Date().getTimezoneOffset();
+
+    async function readFileText(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsText(file);
+      });
+    }
+
+    function parseTimestamp(row) {
+      if (!row) return null;
+      const iso = row.t_iso;
+      const ms = row.t_ms;
+      const misc = row.t;
+      let date = null;
+      if (iso) {
+        date = new Date(iso);
+      } else if (ms) {
+        date = new Date(Number(ms));
+      } else if (typeof misc === 'string' && misc.startsWith('/Date(')) {
+        const value = Number(misc.replace(/\D/g, ''));
+        date = new Date(value);
+      }
+      return isNaN(date?.getTime()) ? null : date;
+    }
+
+    function normalizeStationName(row) {
+      return row.station_name || row.name || row.station || null;
+    }
+
+    function parseNdjson(content) {
+      return content
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .map((line) => {
+          try { return JSON.parse(line); } catch { return null; }
+        })
+        .filter(Boolean);
+    }
+
+    function filterEvents(rows) {
+      return rows
+        .map((row) => ({ ...row, ts: parseTimestamp(row) }))
+        .filter((row) => row.ts && (row.type === 'IN' || row.type === 'OUT'))
+        .sort((a, b) => a.ts - b.ts);
+    }
+
+    function attachStations(events, stations) {
+      if (!stations.length) return events.map((e) => ({ ...e, station_name: normalizeStationName(e) }));
+      const byId = new Map(stations.map((s) => [String(s.station_id), s]));
+      return events.map((e) => {
+        const meta = byId.get(String(e.station_id)) || {};
+        return {
+          ...e,
+          station_name: meta.station_name || meta.name || e.station_name || e.station || null,
+          lat: meta.lat,
+          lon: meta.lon,
+        };
+      });
+    }
+
+    function groupDaily(events) {
+      const daily = {};
+      for (const e of events) {
+        const day = e.ts.toISOString().slice(0, 10);
+        const bucket = daily[day] || { IN: 0, OUT: 0 };
+        bucket[e.type] = (bucket[e.type] || 0) + 1;
+        daily[day] = bucket;
+      }
+      return Object.entries(daily)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([day, counts]) => ({ day, ...counts }));
+    }
+
+    function topStations(events) {
+      const map = new Map();
+      for (const e of events) {
+        const key = e.station_id || e.station || 'unknown';
+        const entry = map.get(key) || { name: e.station_name || String(key), IN: 0, OUT: 0 };
+        entry[e.type] = (entry[e.type] || 0) + 1;
+        map.set(key, entry);
+      }
+      return Array.from(map.values())
+        .sort((a, b) => b.IN + b.OUT - (a.IN + a.OUT))
+        .slice(0, 15);
+    }
+
+    function updateSummary(events) {
+      const count = events.length;
+      const vehicles = new Set(events.map((e) => e.v)).size;
+      const dates = events.map((e) => e.ts.getTime());
+      const min = dates.length ? new Date(Math.min(...dates)) : null;
+      const max = dates.length ? new Date(Math.max(...dates)) : null;
+      document.getElementById('eventsCount').textContent = count ? count.toLocaleString('fr-FR') : '–';
+      document.getElementById('vehiclesCount').textContent = vehicles || '–';
+      document.getElementById('dateRange').textContent = min ? `${min.toISOString().slice(0, 10)} → ${max.toISOString().slice(0, 10)}` : '–';
+    }
+
+    function renderDailyChart(daily) {
+      if (!daily.length) { Plotly.purge('dailyChart'); return; }
+      const traceIn = { x: daily.map((d) => d.day), y: daily.map((d) => d.IN || 0), type: 'bar', name: 'IN', marker: { color: '#22d3ee' } };
+      const traceOut = { x: daily.map((d) => d.day), y: daily.map((d) => d.OUT || 0), type: 'bar', name: 'OUT', marker: { color: '#3b82f6' } };
+      Plotly.newPlot('dailyChart', [traceIn, traceOut], {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#e5e7eb' },
+        barmode: 'group',
+        margin: { t: 30, r: 10, l: 50, b: 60 },
+      }, { responsive: true, displaylogo: false });
+    }
+
+    function renderStationChart(stations) {
+      if (!stations.length) { Plotly.purge('stationChart'); return; }
+      const names = stations.map((s) => s.name || '–');
+      Plotly.newPlot('stationChart', [
+        { x: names, y: stations.map((s) => s.IN || 0), type: 'bar', name: 'IN', marker: { color: '#22d3ee' } },
+        { x: names, y: stations.map((s) => s.OUT || 0), type: 'bar', name: 'OUT', marker: { color: '#3b82f6' } },
+      ], {
+        paper_bgcolor: 'rgba(0,0,0,0)',
+        plot_bgcolor: 'rgba(0,0,0,0)',
+        font: { color: '#e5e7eb' },
+        barmode: 'stack',
+        margin: { t: 30, r: 10, l: 60, b: 120 },
+      }, { responsive: true, displaylogo: false });
+    }
+
+    async function parseCsv(text) {
+      return new Promise((resolve, reject) => {
+        Papa.parse(text, {
+          header: true,
+          skipEmptyLines: true,
+          complete: (results) => resolve(results.data),
+          error: reject,
+        });
+      });
+    }
+
+    async function handleFiles(ndjsonFiles, stationFile) {
+      const ndjsonContents = await Promise.all(ndjsonFiles.map(readFileText));
+      const rawEvents = ndjsonContents.flatMap(parseNdjson);
+      const filtered = filterEvents(rawEvents);
+      const stationContent = stationFile ? await readFileText(stationFile) : null;
+      const stations = stationContent ? await parseCsv(stationContent) : [];
+      const enriched = attachStations(filtered, stations);
+      updateSummary(enriched);
+      renderDailyChart(groupDaily(enriched));
+      renderStationChart(topStations(enriched));
+    }
+
+    async function loadDemo() {
+      try {
+        const [ndjsonRes, stationsRes] = await Promise.all([
+          fetch('./voi_gbfs_grenoble_20251205_180959.ndjson'),
+          fetch('./voi_stations_grenoble_20251213_175232.csv'),
+        ]);
+        const ndjsonText = await ndjsonRes.text();
+        const stationsText = await stationsRes.text();
+        const rawEvents = parseNdjson(ndjsonText);
+        const filtered = filterEvents(rawEvents);
+        const stations = await parseCsv(stationsText);
+        const enriched = attachStations(filtered, stations);
+        updateSummary(enriched);
+        renderDailyChart(groupDaily(enriched));
+        renderStationChart(topStations(enriched));
+      } catch (err) {
+        console.error(err);
+        alert('Impossible de charger les fichiers de démonstration.');
+      }
+    }
+
+    document.getElementById('loadBtn').addEventListener('click', async () => {
+      const ndjsonFiles = Array.from(document.getElementById('ndjsonInput').files || []);
+      if (!ndjsonFiles.length) { alert('Ajoutez au moins un fichier NDJSON.'); return; }
+      const stationFile = document.getElementById('stationsInput').files?.[0];
+      await handleFiles(ndjsonFiles, stationFile);
+    });
+
+    document.getElementById('demoBtn').addEventListener('click', loadDemo);
+    loadDemo();
+  </script>
+</body>
+</html>
