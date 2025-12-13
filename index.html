@@ -7,7 +7,6 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
   <script
     src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"
     integrity="sha512-dfX5uYVXzyU8+KHqj8bjo7UkOdg18PaOtpa48djpNbZHwExddghZ+ZmzWT06R5v6NSk3ZUfsH6FNEDepLx9hPQ=="
@@ -34,37 +33,41 @@
   ></script>
   <style>
     :root {
-      --bg: #f5f5f7;
-      --panel: #ffffff;
-      --accent: #0a84ff;
-      --text: #0f172a;
-      --muted: #4b5563;
-      --border: #e5e7eb;
-      --shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+      --bg: #04070f;
+      --panel: #0c111c;
+      --accent: #00f59b;
+      --accent-2: #7c3aed;
+      --text: #e6edf7;
+      --muted: #8fa2b7;
+      --border: #151d2c;
+      --shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
+      --glow: 0 0 0 1px rgba(0, 245, 155, 0.35), 0 12px 30px rgba(0, 245, 155, 0.12);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: radial-gradient(circle at 20% 20%, rgba(10, 132, 255, 0.07), transparent 35%),
-        radial-gradient(circle at 80% 0%, rgba(52, 199, 89, 0.08), transparent 30%),
-        var(--bg);
+      min-height: 100vh;
+      background: radial-gradient(circle at 15% 20%, rgba(124, 58, 237, 0.08), transparent 28%),
+        radial-gradient(circle at 85% 10%, rgba(0, 245, 155, 0.1), transparent 32%),
+        linear-gradient(180deg, #050913 0%, #04070f 100%);
       color: var(--text);
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       line-height: 1.5;
     }
     header {
-      padding: 24px 32px 12px;
+      padding: 18px 28px 10px;
       border-bottom: 1px solid var(--border);
-      background: rgba(255, 255, 255, 0.85);
+      background: rgba(10, 14, 22, 0.9);
       backdrop-filter: blur(10px);
       position: sticky;
       top: 0;
       z-index: 5;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
     }
-    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; }
-    h2 { margin-top: 24px; margin-bottom: 12px; letter-spacing: -0.01em; }
+    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; color: #f8fafc; }
+    h2 { margin-top: 20px; margin-bottom: 10px; letter-spacing: -0.01em; color: #e6edf7; }
     p { margin: 8px 0 0; color: var(--muted); }
-    .container { padding: 16px 32px 32px; max-width: 1280px; margin: 0 auto; }
+    .container { padding: 16px 28px 28px; max-width: 1220px; margin: 0 auto; max-height: calc(100vh - 108px); overflow-y: auto; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -72,88 +75,90 @@
       margin-top: 16px;
     }
     .card {
-      background: var(--panel);
+      background: linear-gradient(150deg, rgba(14, 19, 31, 0.98) 0%, rgba(10, 14, 24, 0.95) 100%);
       border: 1px solid var(--border);
       border-radius: 14px;
       padding: 16px 18px;
       box-shadow: var(--shadow);
     }
-    label { font-weight: 600; display: block; margin-bottom: 6px; }
+    label { font-weight: 700; display: block; margin-bottom: 6px; color: #d9e3f0; }
     input[type="file"] {
       width: 100%;
-      background: #f8fafc;
+      background: #0f1624;
       border: 1px dashed var(--border);
       color: var(--muted);
       padding: 10px;
       border-radius: 10px;
     }
     button {
-      background: linear-gradient(135deg, #0a84ff, #0f6add);
-      color: #ffffff;
+      background: linear-gradient(120deg, var(--accent), #12c2e9);
+      color: #04100d;
       border: none;
       border-radius: 12px;
       padding: 11px 16px;
-      font-weight: 700;
+      font-weight: 800;
       cursor: pointer;
-      box-shadow: 0 10px 30px rgba(10, 132, 255, 0.25);
-      transition: transform 0.1s ease, box-shadow 0.2s ease, filter 0.2s ease;
+      box-shadow: var(--glow);
+      transition: transform 0.1s ease, box-shadow 0.25s ease, filter 0.2s ease;
+      letter-spacing: 0.01em;
     }
-    button:hover { filter: brightness(1.02); box-shadow: 0 14px 34px rgba(10, 132, 255, 0.32); }
+    button:hover { filter: brightness(1.08); box-shadow: 0 0 0 1px rgba(18, 194, 233, 0.5), 0 16px 40px rgba(0, 245, 155, 0.25); }
     button:active { transform: translateY(1px); }
     .inline { display: inline-flex; align-items: center; gap: 8px; }
     .pill {
       display: inline-block;
       padding: 6px 10px;
       border-radius: 999px;
-      background: rgba(10, 132, 255, 0.12);
-      color: var(--text);
-      border: 1px solid rgba(10, 132, 255, 0.2);
+      background: rgba(0, 245, 155, 0.12);
+      color: #b1fbe0;
+      border: 1px solid rgba(0, 245, 155, 0.35);
       font-size: 13px;
       margin-right: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
     }
     .muted { color: var(--muted); }
     .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 10px; }
-    .metric { padding: 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; }
-    .metric strong { display: block; font-size: 22px; letter-spacing: -0.01em; }
-    #charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
-    .plot { min-height: 320px; }
-    #map { height: 520px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
-    .footer { margin-top: 32px; color: var(--muted); font-size: 14px; }
-    a { color: #22d3ee; }
+    .metric { padding: 12px; background: #0f1524; border: 1px solid var(--border); border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02); }
+    .metric strong { display: block; font-size: 22px; letter-spacing: -0.01em; color: #f8fafc; }
+    #map { height: 420px; border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--border); }
+    .footer { margin-top: 20px; color: var(--muted); font-size: 14px; text-align: center; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-shadow: 0 0 10px rgba(0, 245, 155, 0.35); }
     .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     .control { display: flex; flex-direction: column; gap: 6px; }
     .control-span-2 { grid-column: span 2; }
     select, input[type="number"], input[type="datetime-local"] {
-      background: #f8fafc;
+      background: #0f1624;
       border: 1px solid var(--border);
       color: var(--text);
       padding: 10px 12px;
       border-radius: 12px;
     }
     input[type="range"] {
-      accent-color: #0a84ff;
+      accent-color: var(--accent);
     }
     .pill-button {
       border: 1px solid var(--border);
-      background: #f8fafc;
+      background: #0f1624;
       color: var(--text);
       padding: 9px 12px;
       border-radius: 999px;
       cursor: pointer;
       transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .pill-button:hover { border-color: #0a84ff; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12); }
-    .vehicle-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .vehicle-item { padding: 9px 11px; border-radius: 12px; border: 1px solid var(--border); background: #f8fafc; cursor: pointer; }
-    .vehicle-item.active { border-color: #0a84ff; box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.35); }
+    .pill-button:hover { border-color: var(--accent); box-shadow: 0 6px 20px rgba(0, 245, 155, 0.18); }
+    .vehicle-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; max-height: 230px; overflow-y: auto; padding: 6px; background: #0f1624; border: 1px solid var(--border); border-radius: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
+    .vehicle-item { padding: 9px 11px; border-radius: 12px; border: 1px solid var(--border); background: rgba(255, 255, 255, 0.02); cursor: pointer; transition: transform 0.1s ease, border-color 0.2s ease, box-shadow 0.2s ease; }
+    .vehicle-item.active { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(0, 245, 155, 0.25), 0 12px 28px rgba(0, 0, 0, 0.35); transform: translateY(-1px); }
     .muted-text { color: var(--muted); font-size: 14px; }
-    .badge { background: rgba(10, 132, 255, 0.15); color: var(--text); padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(10, 132, 255, 0.4); font-size: 12px; }
-    .map-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; align-items: start; }
-    @media (max-width: 960px) { .map-grid { grid-template-columns: 1fr; } #map { height: 420px; } }
-    .panel { background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
-    .panel h3 { margin: 0 0 8px; font-size: 16px; }
+    .badge { background: rgba(124, 58, 237, 0.18); color: var(--text); padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(124, 58, 237, 0.35); font-size: 12px; }
+    .map-grid { display: grid; grid-template-columns: 1.6fr 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 960px) { .map-grid { grid-template-columns: 1fr; } #map { height: 360px; } }
+    .panel { background: #0f1524; border: 1px solid var(--border); border-radius: 12px; padding: 12px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.02); }
+    .panel h3 { margin: 0 0 8px; font-size: 16px; color: #e8ecf4; }
     .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
-    .chip { padding: 8px 10px; background: rgba(15, 23, 42, 0.04); border: 1px solid var(--border); border-radius: 12px; font-weight: 600; }
+    .chip { padding: 8px 10px; background: rgba(15, 23, 42, 0.18); border: 1px solid var(--border); border-radius: 12px; font-weight: 600; color: #dce5f1; }
     .map-legend { display: flex; gap: 10px; align-items: center; margin-top: 10px; color: var(--muted); font-size: 13px; }
     .legend-dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; margin-right: 6px; }
     .range-group { display: flex; flex-direction: column; gap: 10px; }
@@ -163,8 +168,8 @@
       inset: 18px 0;
       height: 10px;
       border-radius: 999px;
-      background: linear-gradient(to right, #e5e7eb 0%, #e5e7eb 100%);
-      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+      background: linear-gradient(to right, #0b1020 0%, #0b1020 100%);
+      box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.35);
     }
     .hour-range {
       position: absolute;
@@ -182,18 +187,18 @@
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: #0a84ff;
-      border: 2px solid #fff;
-      box-shadow: 0 4px 10px rgba(10, 132, 255, 0.35);
+      background: var(--accent);
+      border: 2px solid #0b1020;
+      box-shadow: 0 4px 10px rgba(0, 245, 155, 0.35);
     }
     .hour-range::-moz-range-thumb {
       pointer-events: all;
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background: #0a84ff;
-      border: 2px solid #fff;
-      box-shadow: 0 4px 10px rgba(10, 132, 255, 0.35);
+      background: var(--accent);
+      border: 2px solid #0b1020;
+      box-shadow: 0 4px 10px rgba(0, 245, 155, 0.35);
     }
     .hour-range::-moz-range-track { background: transparent; }
     .range-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -207,7 +212,7 @@
       height: 0;
       border-left: 7px solid transparent;
       border-right: 7px solid transparent;
-      border-bottom: 12px solid var(--arrow-color, #0a84ff);
+      border-bottom: 12px solid var(--arrow-color, var(--accent));
       transform: rotate(var(--angle, 0deg)) scale(0.9);
       filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.35));
     }
@@ -240,11 +245,6 @@
       </div>
     </div>
 
-    <div id="charts" style="margin-top: 20px;">
-      <div class="card"><h2>Flux quotidiens</h2><div id="dailyChart" class="plot"></div></div>
-      <div class="card"><h2>Stations les plus actives</h2><div id="stationChart" class="plot"></div></div>
-    </div>
-
     <div class="card" style="margin-top: 20px;">
       <h2>Carte & explorateur de trajets</h2>
       <p class="muted">Une seule carte rassemble les stations et les trajets reconstitués. Cliquez sur une station pour révéler ses flux IN/OUT, filtrer automatiquement les trajets associés et survoler les lignes pour voir les détails.</p>
@@ -252,8 +252,8 @@
         <div>
           <div id="map"></div>
           <div class="map-legend">
-            <span><span class="legend-dot" style="background:#0a84ff;"></span>Stations</span>
-            <span><span class="legend-dot" style="background:#34c759;"></span>Lignes de trajets filtrés</span>
+            <span><span class="legend-dot" style="background:#00f59b;"></span>Stations</span>
+            <span><span class="legend-dot" style="background:#7c3aed;"></span>Lignes de trajets filtrés</span>
             <span id="mapStatus" class="muted-text"></span>
           </div>
         </div>
@@ -305,7 +305,7 @@
 
     <div class="card" style="margin-top: 20px;">
       <h2>Détails</h2>
-      <p class="muted">Exportez vos visualisations via le menu contextuel de Plotly. Les traitements reproduisent les étapes essentielles du code Streamlit : filtrage IN/OUT, tri chronologique et association des métadonnées stations.</p>
+      <p class="muted">Vue condensée façon « black hat » : filtres IN/OUT, tri chronologique et association des métadonnées stations restent identiques à la version Streamlit, tout en tenant sur une page fixe.</p>
     </div>
 
     <div class="footer">Source : <a href="https://github.com/tokojimo/VOI" target="_blank" rel="noopener">tokojimo/VOI</a>. Cette page fonctionne sur GitHub Pages ou tout serveur statique.</div>
@@ -401,32 +401,6 @@
       return Array.from(map.values());
     }
 
-    function groupDaily(events) {
-      const daily = {};
-      for (const e of events) {
-        const day = e.ts.toISOString().slice(0, 10);
-        const bucket = daily[day] || { IN: 0, OUT: 0 };
-        bucket[e.type] = (bucket[e.type] || 0) + 1;
-        daily[day] = bucket;
-      }
-      return Object.entries(daily)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([day, counts]) => ({ day, ...counts }));
-    }
-
-    function topStations(events) {
-      const map = new Map();
-      for (const e of events) {
-        const key = e.station_id || e.station || 'unknown';
-        const entry = map.get(key) || { name: e.station_name || String(key), IN: 0, OUT: 0 };
-        entry[e.type] = (entry[e.type] || 0) + 1;
-        map.set(key, entry);
-      }
-      return Array.from(map.values())
-        .sort((a, b) => b.IN + b.OUT - (a.IN + a.OUT))
-        .slice(0, 15);
-    }
-
     function updateSummary(events) {
       const count = events.length;
       const vehicles = new Set(events.map((e) => e.v)).size;
@@ -436,34 +410,6 @@
       document.getElementById('eventsCount').textContent = count ? count.toLocaleString('fr-FR') : '–';
       document.getElementById('vehiclesCount').textContent = vehicles || '–';
       document.getElementById('dateRange').textContent = min ? `${min.toISOString().slice(0, 10)} → ${max.toISOString().slice(0, 10)}` : '–';
-    }
-
-    function renderDailyChart(daily) {
-      if (!daily.length) { Plotly.purge('dailyChart'); return; }
-      const traceIn = { x: daily.map((d) => d.day), y: daily.map((d) => d.IN || 0), type: 'bar', name: 'IN', marker: { color: '#0a84ff' } };
-      const traceOut = { x: daily.map((d) => d.day), y: daily.map((d) => d.OUT || 0), type: 'bar', name: 'OUT', marker: { color: '#34c759' } };
-      Plotly.newPlot('dailyChart', [traceIn, traceOut], {
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        font: { color: '#0f172a' },
-        barmode: 'group',
-        margin: { t: 30, r: 10, l: 50, b: 60 },
-      }, { responsive: true, displaylogo: false });
-    }
-
-    function renderStationChart(stations) {
-      if (!stations.length) { Plotly.purge('stationChart'); return; }
-      const names = stations.map((s) => s.name || '–');
-      Plotly.newPlot('stationChart', [
-        { x: names, y: stations.map((s) => s.IN || 0), type: 'bar', name: 'IN', marker: { color: '#0a84ff' } },
-        { x: names, y: stations.map((s) => s.OUT || 0), type: 'bar', name: 'OUT', marker: { color: '#34c759' } },
-      ], {
-        paper_bgcolor: 'rgba(0,0,0,0)',
-        plot_bgcolor: 'rgba(0,0,0,0)',
-        font: { color: '#0f172a' },
-        barmode: 'stack',
-        margin: { t: 30, r: 10, l: 60, b: 120 },
-      }, { responsive: true, displaylogo: false });
     }
 
     let mapInstance = null;
@@ -502,9 +448,9 @@
       const startPct = (start / 23) * 100;
       const endPct = (end / 23) * 100;
       if (start <= end) {
-        track.style.background = `linear-gradient(to right, #e5e7eb 0%, #e5e7eb ${startPct}%, #0a84ff ${startPct}%, #0a84ff ${endPct}%, #e5e7eb ${endPct}%, #e5e7eb 100%)`;
+        track.style.background = `linear-gradient(to right, #0b1020 0%, #0b1020 ${startPct}%, var(--accent) ${startPct}%, var(--accent) ${endPct}%, #0b1020 ${endPct}%, #0b1020 100%)`;
       } else {
-        track.style.background = `linear-gradient(to right, #0a84ff 0%, #0a84ff ${endPct}%, #e5e7eb ${endPct}%, #e5e7eb ${startPct}%, #0a84ff ${startPct}%, #0a84ff 100%)`;
+        track.style.background = `linear-gradient(to right, var(--accent) 0%, var(--accent) ${endPct}%, #0b1020 ${endPct}%, #0b1020 ${startPct}%, var(--accent) ${startPct}%, var(--accent) 100%)`;
       }
     }
 
@@ -575,10 +521,10 @@
         const isActive = String(uiState.selectedStation) === String(station.station_id);
         const marker = L.circleMarker([station.lat, station.lon], {
           radius: Math.max(7, Math.min(16, total / 8)),
-          color: isActive ? '#ff9f0a' : '#0a84ff',
+          color: isActive ? '#ff9f0a' : '#00f59b',
           weight: isActive ? 3 : 1.5,
-          fillColor: '#34c759',
-          fillOpacity: 0.75,
+          fillColor: '#7c3aed',
+          fillOpacity: 0.7,
         }).bindPopup(
           `<strong>${station.name || 'Station inconnue'}</strong><br/>IN: ${station.IN || 0}<br/>OUT: ${station.OUT || 0}<br/>Total: ${total}`
         );
@@ -606,7 +552,7 @@
       uiState.filteredTrips.forEach((trip) => {
         if (trip.startLat && trip.startLon && trip.endLat && trip.endLon) {
           const isFocusedVehicle = uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle;
-          const color = isFocusedVehicle ? '#ff9f0a' : '#0a84ff';
+          const color = isFocusedVehicle ? '#ff9f0a' : '#7c3aed';
           const line = L.polyline(
             [
               [trip.startLat, trip.startLon],
@@ -743,14 +689,25 @@
     function renderVehicleList() {
       const container = document.getElementById('vehiclesList');
       container.innerHTML = '';
-      const vehicles = Array.from(new Set(uiState.trips.map((t) => t.vehicle))).sort();
+      const vehicles = Array.from(new Set(uiState.trips.map((t) => t.vehicle)));
       const filteredVehicles = new Set(uiState.filteredTrips.map((t) => t.vehicle));
-      vehicles.forEach((vehicle) => {
-        const count = uiState.filteredTrips.filter((t) => t.vehicle === vehicle).length;
+      const orderedVehicles = vehicles
+        .map((vehicle) => ({
+          vehicle,
+          count: uiState.filteredTrips.filter((t) => t.vehicle === vehicle).length,
+          inFilter: filteredVehicles.has(vehicle),
+        }))
+        .sort((a, b) => {
+          if (a.inFilter !== b.inFilter) return a.inFilter ? -1 : 1;
+          if (a.inFilter && b.inFilter) return b.count - a.count || a.vehicle.localeCompare(b.vehicle);
+          return a.vehicle.localeCompare(b.vehicle);
+        });
+
+      orderedVehicles.forEach(({ vehicle, count, inFilter }) => {
         const button = document.createElement('div');
         button.className = `vehicle-item${uiState.selectedVehicle === vehicle ? ' active' : ''}`;
         button.textContent = count ? `${vehicle} (${count})` : `${vehicle} (hors filtre)`;
-        button.style.opacity = filteredVehicles.has(vehicle) ? '1' : '0.5';
+        button.style.opacity = inFilter ? '1' : '0.4';
         button.addEventListener('click', () => {
           uiState.selectedVehicle = uiState.selectedVehicle === vehicle ? null : vehicle;
           filterTrips();
@@ -813,9 +770,7 @@
       uiState.stations = stations;
       uiState.trips = buildTrips(enriched);
       updateSummary(enriched);
-      renderDailyChart(groupDaily(enriched));
       const stationAggregates = aggregateStations(enriched);
-      renderStationChart(topStations(enriched));
       renderMap(stationAggregates);
       populateStationSelect(stationAggregates);
       filterTrips();
@@ -862,9 +817,7 @@
         uiState.stations = stations;
         uiState.trips = buildTrips(enriched);
         updateSummary(enriched);
-        renderDailyChart(groupDaily(enriched));
         const stationAggregates = aggregateStations(enriched);
-        renderStationChart(topStations(enriched));
         renderMap(stationAggregates);
         populateStationSelect(stationAggregates);
         filterTrips();
