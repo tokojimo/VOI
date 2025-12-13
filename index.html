@@ -678,25 +678,38 @@
       filterTrips();
     }
 
+    function buildDemoUrls(filename) {
+      const sameOrigin = new URL(filename, window.location.href).toString();
+      return [
+        sameOrigin,
+        `https://tokojimo.github.io/VOI/${filename}`,
+        `https://raw.githubusercontent.com/tokojimo/VOI/main/${filename}`,
+      ];
+    }
+
     async function fetchWithFallback(urls) {
+      const errors = [];
       for (const url of urls) {
-        const response = await fetch(url);
-        if (response.ok) return response.text();
+        try {
+          const response = await fetch(url);
+          if (response.ok) return response.text();
+          errors.push(`${url} → ${response.status}`);
+        } catch (err) {
+          errors.push(`${url} → ${err.message}`);
+        }
       }
-      throw new Error(`Aucune des URLs suivantes n'a pu être chargée : ${urls.join(', ')}`);
+      throw new Error(`Aucune des URLs suivantes n'a pu être chargée :\n${errors.join('\n')}`);
     }
 
     async function loadDemo() {
       try {
-        const ndjsonText = await fetchWithFallback([
-          './voi_gbfs_grenoble_20251205_180959.ndjson',
-          'https://raw.githubusercontent.com/tokojimo/VOI/main/voi_gbfs_grenoble_20251205_180959.ndjson',
-        ]);
+        const ndjsonText = await fetchWithFallback(
+          buildDemoUrls('voi_gbfs_grenoble_20251205_180959.ndjson')
+        );
 
-        const stationsText = await fetchWithFallback([
-          './voi_stations_grenoble_20251213_175232.csv',
-          'https://raw.githubusercontent.com/tokojimo/VOI/main/voi_stations_grenoble_20251213_175232.csv',
-        ]);
+        const stationsText = await fetchWithFallback(
+          buildDemoUrls('voi_stations_grenoble_20251213_175232.csv')
+        );
 
         const rawEvents = parseNdjson(ndjsonText);
         const filtered = filterEvents(rawEvents);
@@ -714,7 +727,7 @@
         filterTrips();
       } catch (err) {
         console.error(err);
-        alert('Impossible de charger les fichiers de démonstration.');
+        alert(`Impossible de charger les fichiers de démonstration.\n${err.message}`);
       }
     }
 
