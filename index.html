@@ -12,7 +12,7 @@
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-o9N1j7kPjJgLcMbGg3xFjNJ8h2bM3pX5J9g2f2G4E0c="
+    integrity="sha256-o9N1j7kPjJgLcMbGg3xFjNJ8h2bM3pX5J9g2f2G4E0="
     crossorigin=""
   />
   <script
@@ -22,17 +22,20 @@
   ></script>
   <style>
     :root {
-      --bg: #0f172a;
-      --panel: #111827;
-      --accent: #22d3ee;
-      --text: #e5e7eb;
-      --muted: #9ca3af;
-      --border: #1f2937;
+      --bg: #f5f5f7;
+      --panel: #ffffff;
+      --accent: #0a84ff;
+      --text: #0f172a;
+      --muted: #4b5563;
+      --border: #e5e7eb;
+      --shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
     }
     * { box-sizing: border-box; }
     body {
       margin: 0;
-      background: var(--bg);
+      background: radial-gradient(circle at 20% 20%, rgba(10, 132, 255, 0.07), transparent 35%),
+        radial-gradient(circle at 80% 0%, rgba(52, 199, 89, 0.08), transparent 30%),
+        var(--bg);
       color: var(--text);
       font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       line-height: 1.5;
@@ -40,11 +43,16 @@
     header {
       padding: 24px 32px 12px;
       border-bottom: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      position: sticky;
+      top: 0;
+      z-index: 5;
     }
-    h1 { margin: 0 0 8px; font-size: 28px; }
-    h2 { margin-top: 24px; margin-bottom: 12px; }
+    h1 { margin: 0 0 8px; font-size: 28px; letter-spacing: -0.02em; }
+    h2 { margin-top: 24px; margin-bottom: 12px; letter-spacing: -0.01em; }
     p { margin: 8px 0 0; color: var(--muted); }
-    .container { padding: 16px 32px 32px; }
+    .container { padding: 16px 32px 32px; max-width: 1200px; margin: 0 auto; }
     .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -54,76 +62,77 @@
     .card {
       background: var(--panel);
       border: 1px solid var(--border);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 16px;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+      box-shadow: var(--shadow);
     }
     label { font-weight: 600; display: block; margin-bottom: 6px; }
     input[type="file"] {
       width: 100%;
-      background: #0b1220;
+      background: #f8fafc;
       border: 1px dashed var(--border);
       color: var(--muted);
       padding: 10px;
-      border-radius: 8px;
+      border-radius: 10px;
     }
     button {
-      background: linear-gradient(120deg, #22d3ee, #3b82f6);
-      color: #0b1220;
+      background: linear-gradient(135deg, #0a84ff, #0f6add);
+      color: #ffffff;
       border: none;
-      border-radius: 10px;
-      padding: 10px 14px;
+      border-radius: 12px;
+      padding: 11px 16px;
       font-weight: 700;
       cursor: pointer;
-      transition: transform 0.1s ease, filter 0.2s ease;
+      box-shadow: 0 10px 30px rgba(10, 132, 255, 0.25);
+      transition: transform 0.1s ease, box-shadow 0.2s ease, filter 0.2s ease;
     }
-    button:hover { filter: brightness(1.05); }
+    button:hover { filter: brightness(1.02); box-shadow: 0 14px 34px rgba(10, 132, 255, 0.32); }
     button:active { transform: translateY(1px); }
     .inline { display: inline-flex; align-items: center; gap: 8px; }
     .pill {
       display: inline-block;
       padding: 6px 10px;
       border-radius: 999px;
-      background: rgba(34, 211, 238, 0.12);
+      background: rgba(10, 132, 255, 0.12);
       color: var(--text);
-      border: 1px solid rgba(34, 211, 238, 0.3);
+      border: 1px solid rgba(10, 132, 255, 0.2);
       font-size: 13px;
       margin-right: 6px;
     }
     .muted { color: var(--muted); }
     .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 10px; }
-    .metric { padding: 12px; background: #0b1220; border: 1px solid var(--border); border-radius: 10px; }
-    .metric strong { display: block; font-size: 22px; }
+    .metric { padding: 12px; background: #f8fafc; border: 1px solid var(--border); border-radius: 12px; }
+    .metric strong { display: block; font-size: 22px; letter-spacing: -0.01em; }
     #charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
     .plot { min-height: 320px; }
-    #map { height: 420px; border-radius: 12px; overflow: hidden; }
-    #routeMap { height: 460px; border-radius: 12px; overflow: hidden; margin-top: 12px; }
+    #map { height: 420px; border-radius: 14px; overflow: hidden; box-shadow: var(--shadow); }
+    #routeMap { height: 460px; border-radius: 14px; overflow: hidden; margin-top: 12px; box-shadow: var(--shadow); }
     .footer { margin-top: 32px; color: var(--muted); font-size: 14px; }
     a { color: #22d3ee; }
     .filters-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
     .control { display: flex; flex-direction: column; gap: 6px; }
     select, input[type="number"], input[type="datetime-local"] {
-      background: #0b1220;
+      background: #f8fafc;
       border: 1px solid var(--border);
       color: var(--text);
-      padding: 8px 10px;
-      border-radius: 8px;
+      padding: 10px 12px;
+      border-radius: 12px;
     }
     .pill-button {
       border: 1px solid var(--border);
-      background: #0b1220;
+      background: #f8fafc;
       color: var(--text);
-      padding: 8px 10px;
+      padding: 9px 12px;
       border-radius: 999px;
       cursor: pointer;
-      transition: background 0.2s ease, border-color 0.2s ease;
+      transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .pill-button:hover { border-color: #3b82f6; }
+    .pill-button:hover { border-color: #0a84ff; box-shadow: 0 6px 20px rgba(15, 23, 42, 0.12); }
     .vehicle-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-    .vehicle-item { padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: #0b1220; cursor: pointer; }
-    .vehicle-item.active { border-color: #22d3ee; box-shadow: 0 0 0 1px rgba(34, 211, 238, 0.4); }
+    .vehicle-item { padding: 9px 11px; border-radius: 12px; border: 1px solid var(--border); background: #f8fafc; cursor: pointer; }
+    .vehicle-item.active { border-color: #0a84ff; box-shadow: 0 0 0 1px rgba(10, 132, 255, 0.35); }
     .muted-text { color: var(--muted); font-size: 14px; }
-    .badge { background: rgba(34, 211, 238, 0.15); color: var(--text); padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(34, 211, 238, 0.4); font-size: 12px; }
+    .badge { background: rgba(10, 132, 255, 0.15); color: var(--text); padding: 4px 8px; border-radius: 10px; border: 1px solid rgba(10, 132, 255, 0.4); font-size: 12px; }
   </style>
 </head>
 <body>
@@ -161,6 +170,7 @@
     <div class="card" style="margin-top: 20px;">
       <h2>Carte des stations</h2>
       <div id="map"></div>
+      <div id="mapStatus" class="muted-text" style="margin-top: 8px;"></div>
     </div>
 
     <div class="card" style="margin-top: 20px;">
@@ -329,12 +339,12 @@
 
     function renderDailyChart(daily) {
       if (!daily.length) { Plotly.purge('dailyChart'); return; }
-      const traceIn = { x: daily.map((d) => d.day), y: daily.map((d) => d.IN || 0), type: 'bar', name: 'IN', marker: { color: '#22d3ee' } };
-      const traceOut = { x: daily.map((d) => d.day), y: daily.map((d) => d.OUT || 0), type: 'bar', name: 'OUT', marker: { color: '#3b82f6' } };
+      const traceIn = { x: daily.map((d) => d.day), y: daily.map((d) => d.IN || 0), type: 'bar', name: 'IN', marker: { color: '#0a84ff' } };
+      const traceOut = { x: daily.map((d) => d.day), y: daily.map((d) => d.OUT || 0), type: 'bar', name: 'OUT', marker: { color: '#34c759' } };
       Plotly.newPlot('dailyChart', [traceIn, traceOut], {
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
-        font: { color: '#e5e7eb' },
+        font: { color: '#0f172a' },
         barmode: 'group',
         margin: { t: 30, r: 10, l: 50, b: 60 },
       }, { responsive: true, displaylogo: false });
@@ -344,12 +354,12 @@
       if (!stations.length) { Plotly.purge('stationChart'); return; }
       const names = stations.map((s) => s.name || '–');
       Plotly.newPlot('stationChart', [
-        { x: names, y: stations.map((s) => s.IN || 0), type: 'bar', name: 'IN', marker: { color: '#22d3ee' } },
-        { x: names, y: stations.map((s) => s.OUT || 0), type: 'bar', name: 'OUT', marker: { color: '#3b82f6' } },
+        { x: names, y: stations.map((s) => s.IN || 0), type: 'bar', name: 'IN', marker: { color: '#0a84ff' } },
+        { x: names, y: stations.map((s) => s.OUT || 0), type: 'bar', name: 'OUT', marker: { color: '#34c759' } },
       ], {
         paper_bgcolor: 'rgba(0,0,0,0)',
         plot_bgcolor: 'rgba(0,0,0,0)',
-        font: { color: '#e5e7eb' },
+        font: { color: '#0f172a' },
         barmode: 'stack',
         margin: { t: 30, r: 10, l: 60, b: 120 },
       }, { responsive: true, displaylogo: false });
@@ -374,16 +384,10 @@
 
     function renderMap(stations) {
       const withCoords = stations.filter((s) => s.lat && s.lon);
-      if (!withCoords.length) {
-        if (mapInstance) {
-          mapInstance.remove();
-          mapInstance = null;
-        }
-        return;
-      }
+      const status = document.getElementById('mapStatus');
 
       if (!mapInstance) {
-        mapInstance = L.map('map');
+        mapInstance = L.map('map').setView([45.1885, 5.7245], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           attribution: '&copy; OpenStreetMap contributors',
           maxZoom: 19,
@@ -392,6 +396,15 @@
       }
 
       mapLayerGroup.clearLayers();
+
+      if (!withCoords.length) {
+        mapInstance.setView([45.1885, 5.7245], 13);
+        if (status) {
+          status.textContent = 'Aucune station géolocalisée dans les données chargées.';
+        }
+        return;
+      }
+
       const bounds = [];
 
       for (const station of withCoords) {
@@ -399,10 +412,10 @@
         const popup = `<strong>${station.name || 'Station inconnue'}</strong><br/>IN: ${station.IN || 0}<br/>OUT: ${station.OUT || 0}<br/>Total: ${total}`;
         const marker = L.circleMarker([station.lat, station.lon], {
           radius: Math.max(6, Math.min(14, total / 10)),
-          color: '#22d3ee',
+          color: '#0a84ff',
           weight: 2,
-          fillColor: '#3b82f6',
-          fillOpacity: 0.6,
+          fillColor: '#34c759',
+          fillOpacity: 0.7,
         }).bindPopup(popup);
         marker.addTo(mapLayerGroup);
         bounds.push([station.lat, station.lon]);
@@ -410,6 +423,9 @@
 
       if (bounds.length) {
         mapInstance.fitBounds(bounds, { padding: [20, 20] });
+        if (status) {
+          status.textContent = `${withCoords.length} station(s) géolocalisée(s) affichée(s) sur Grenoble.`;
+        }
       }
     }
 
@@ -544,16 +560,16 @@
       }
 
       const bounds = [];
-      const addStationMarker = (id, name, lat, lon) => {
-        if (!lat || !lon) return;
-        if (stationLookup.has(id)) return;
-        const marker = L.circleMarker([lat, lon], {
-          radius: 7,
-          color: '#22d3ee',
-          weight: String(uiState.selectedStation) === String(id) ? 3 : 1.5,
-          fillColor: '#0ea5e9',
-          fillOpacity: 0.7,
-        }).bindPopup(`<strong>${name || 'Station'}</strong><br/><span class="badge">Cliquer pour filtrer</span>`);
+        const addStationMarker = (id, name, lat, lon) => {
+          if (!lat || !lon) return;
+          if (stationLookup.has(id)) return;
+          const marker = L.circleMarker([lat, lon], {
+            radius: 7,
+            color: '#0a84ff',
+            weight: String(uiState.selectedStation) === String(id) ? 3 : 1.5,
+            fillColor: '#34c759',
+            fillOpacity: 0.7,
+          }).bindPopup(`<strong>${name || 'Station'}</strong><br/><span class="badge">Cliquer pour filtrer</span>`);
         marker.on('click', () => {
           uiState.selectedStation = String(id);
           document.getElementById('stationSelect').value = String(id);
@@ -575,8 +591,8 @@
               [trip.endLat, trip.endLon],
             ],
             {
-              color: uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle ? '#f59e0b' : '#3b82f6',
-              weight: uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle ? 5 : 3,
+              color: uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle ? '#ff9f0a' : '#0a84ff',
+              weight: uiState.selectedVehicle && uiState.selectedVehicle === trip.vehicle ? 5 : 3.5,
               opacity: 0.8,
             }
           ).bindPopup(
