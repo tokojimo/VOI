@@ -346,11 +346,26 @@
     }
 
     async function parseCsv(text) {
+      const parseCoordinate = (value) => {
+        if (value === undefined || value === null || value === '') return null;
+        if (typeof value === 'number') return value;
+        const normalized = value.toString().replace(',', '.');
+        const parsed = Number.parseFloat(normalized);
+        return Number.isFinite(parsed) ? parsed : null;
+      };
+
       return new Promise((resolve, reject) => {
         Papa.parse(text, {
           header: true,
           skipEmptyLines: true,
-          complete: (results) => resolve(results.data),
+          complete: (results) => {
+            const normalized = results.data.map((row) => ({
+              ...row,
+              lat: parseCoordinate(row.lat),
+              lon: parseCoordinate(row.lon),
+            }));
+            resolve(normalized);
+          },
           error: reject,
         });
       });
