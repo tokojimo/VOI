@@ -650,14 +650,26 @@
       filterTrips();
     }
 
+    async function fetchWithFallback(urls) {
+      for (const url of urls) {
+        const response = await fetch(url);
+        if (response.ok) return response.text();
+      }
+      throw new Error(`Aucune des URLs suivantes n'a pu être chargée : ${urls.join(', ')}`);
+    }
+
     async function loadDemo() {
       try {
-        const [ndjsonRes, stationsRes] = await Promise.all([
-          fetch('./voi_gbfs_grenoble_20251205_180959.ndjson'),
-          fetch('./voi_stations_grenoble_20251213_175232.csv'),
+        const ndjsonText = await fetchWithFallback([
+          './voi_gbfs_grenoble_20251205_180959.ndjson',
+          'https://raw.githubusercontent.com/tokojimo/VOI/main/voi_gbfs_grenoble_20251205_180959.ndjson',
         ]);
-        const ndjsonText = await ndjsonRes.text();
-        const stationsText = await stationsRes.text();
+
+        const stationsText = await fetchWithFallback([
+          './voi_stations_grenoble_20251213_175232.csv',
+          'https://raw.githubusercontent.com/tokojimo/VOI/main/voi_stations_grenoble_20251213_175232.csv',
+        ]);
+
         const rawEvents = parseNdjson(ndjsonText);
         const filtered = filterEvents(rawEvents);
         const stations = await parseCsv(stationsText);
