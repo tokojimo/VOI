@@ -216,6 +216,20 @@
       transform: rotate(var(--angle, 0deg)) scale(0.9);
       filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.35));
     }
+    .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+      font-weight: 600;
+      color: #dce5f1;
+    }
+    .checkbox-item input { accent-color: var(--accent); }
+    .checkbox-item.disabled { opacity: 0.55; }
   </style>
 </head>
 <body>
@@ -230,7 +244,16 @@
     <div class="grid">
       <div class="card">
         <h2>Données de démonstration</h2>
-        <p class="muted">Les exports NDJSON/CSV sont préchargés depuis le dépôt GitHub pour simplifier l'exploration.</p>
+        <p class="muted">Les exports NDJSON/CSV sont préchargés depuis le dépôt GitHub pour simplifier l'exploration. Choisissez ceux à afficher.</p>
+        <div class="panel" style="margin-top: 12px;">
+          <h3>Fichiers NDJSON</h3>
+          <label class="checkbox-item">
+            <input id="ndjsonSelectAll" type="checkbox" checked />
+            Tout afficher (ignore la sélection)
+          </label>
+          <div id="ndjsonList" class="checkbox-grid"></div>
+          <div id="ndjsonHint" class="muted-text" style="margin-top: 6px;"></div>
+        </div>
         <div style="margin-top: 12px; display: flex; gap: 8px;">
           <button id="demoBtn" type="button">Recharger les données</button>
         </div>
@@ -415,6 +438,11 @@
     let mapInstance = null;
     let stationLayerGroup = null;
     let tripLayerGroup = null;
+
+    const demoNdjsonFiles = [
+      'voi_gbfs_grenoble_20251205_180959.ndjson',
+      'voi_gbfs_grenoble_20260131_100302.ndjson',
+    ];
 
     const uiState = {
       events: [],
@@ -801,15 +829,20 @@
 
     async function loadDemo() {
       try {
-        const ndjsonText = await fetchWithFallback(
-          buildDemoUrls('voi_gbfs_grenoble_20251205_180959.ndjson')
+        const selectedFiles = getSelectedNdjsonFiles();
+        if (!selectedFiles.length) {
+          alert('Sélectionnez au moins un fichier NDJSON.');
+          return;
+        }
+        const ndjsonTexts = await Promise.all(
+          selectedFiles.map((filename) => fetchWithFallback(buildDemoUrls(filename)))
         );
 
         const stationsText = await fetchWithFallback(
           buildDemoUrls('voi_stations_grenoble_20251213_175232.csv')
         );
 
-        const rawEvents = parseNdjson(ndjsonText);
+        const rawEvents = ndjsonTexts.flatMap(parseNdjson);
         const filtered = filterEvents(rawEvents);
         const stations = await parseCsv(stationsText);
         const enriched = attachStations(filtered, stations);
@@ -825,6 +858,63 @@
         console.error(err);
         alert(`Impossible de charger les fichiers de démonstration.\n${err.message}`);
       }
+    }
+
+    function updateNdjsonHint() {
+      const hint = document.getElementById('ndjsonHint');
+      if (!hint) return;
+      const selected = getSelectedNdjsonFiles();
+      hint.textContent = selected.length
+        ? `${selected.length} fichier(s) NDJSON sélectionné(s).`
+        : 'Aucun fichier sélectionné.';
+    }
+
+    function syncNdjsonList(selectAll) {
+      const items = document.querySelectorAll('#ndjsonList input[type="checkbox"]');
+      items.forEach((checkbox) => {
+        checkbox.disabled = selectAll;
+        checkbox.checked = selectAll ? true : checkbox.checked;
+        checkbox.closest('.checkbox-item')?.classList.toggle('disabled', selectAll);
+      });
+      updateNdjsonHint();
+    }
+
+    function getSelectedNdjsonFiles() {
+      const selectAll = document.getElementById('ndjsonSelectAll');
+      if (selectAll?.checked) return [...demoNdjsonFiles];
+      const items = document.querySelectorAll('#ndjsonList input[type="checkbox"]');
+      return [...items].filter((input) => input.checked).map((input) => input.value);
+    }
+
+    function setupNdjsonList() {
+      const container = document.getElementById('ndjsonList');
+      if (!container) return;
+      container.innerHTML = '';
+      demoNdjsonFiles.forEach((filename) => {
+        const label = document.createElement('label');
+        label.className = 'checkbox-item';
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.value = filename;
+        input.checked = true;
+        input.addEventListener('change', () => {
+          const selectAll = document.getElementById('ndjsonSelectAll');
+          if (selectAll?.checked) return;
+          updateNdjsonHint();
+        });
+        const text = document.createElement('span');
+        text.textContent = filename;
+        label.appendChild(input);
+        label.appendChild(text);
+        container.appendChild(label);
+      });
+      const selectAll = document.getElementById('ndjsonSelectAll');
+      if (selectAll) {
+        selectAll.addEventListener('change', () => {
+          syncNdjsonList(selectAll.checked);
+        });
+      }
+      syncNdjsonList(true);
     }
 
     document.getElementById('demoBtn').addEventListener('click', loadDemo);
@@ -851,6 +941,7 @@
       document.getElementById('stationSelect').value = 'all';
       applyHourRange(0, 23);
     });
+    setupNdjsonList();
     updateHourRangeUI();
     loadDemo();
   </script>
